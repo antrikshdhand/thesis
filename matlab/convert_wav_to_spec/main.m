@@ -1,3 +1,8 @@
+% This is an example of how you would use the wavToSpec() function.
+% This script converts the DeepShip dataset, located in `rootDir` (which 
+% contains 4 class folders), into power spectrograms, and exports both
+% the csvs and the spectrogram plots into the current working directory.
+
 % Define processing options
 processingOptions.resampleWav = false;
 processingOptions.resamplingRate = 4000;
@@ -19,8 +24,6 @@ exportOptions.exportSpecPngPath = "spec_imgs";
 exportOptions.exportSpecCsv = true;
 exportOptions.exportSpecCsvPath = "spec_csvs";
 
-verbose = false;
-
 % Point to the root directory of DeepShip dataset on your machine
 rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/acml_2024_s2/raw_datasets/deepship/DeepShip_5k_seg_3s');
 
@@ -35,6 +38,6 @@ for i = 1:length(VESSEL_CLASSES)
         currentFilePath = fullfile(rootDir, vesselClass, currentFile);
 
         wavToSpec(vesselClass, VESSEL_CLASSES, currentFilePath, ...
-            processingOptions, spectrogramOptions, exportOptions, verbose);
+            processingOptions, spectrogramOptions, exportOptions);
     end
 end

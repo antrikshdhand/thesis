@@ -1,3 +1,6 @@
+function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
+    processingOptions, spectrogramOptions, exportOptions)
+
 % FUNCTION NAME:
 %   wavToSpec
 %
@@ -8,7 +11,6 @@
 %
 % INPUT:
 %   vesselClass - (string) The class of the vessel (e.g., "Cargo", "Tanker").
-%   vesselClasses - (cell array of strings) List of all vessel classes, used for folder creation.
 %   currentFilePath - (string) Path to the WAV file for processing.
 %   processingOptions - (struct) WAV file processing settings including:
 %       * resampleWav - (logical) Flag to enable resampling
@@ -22,29 +24,26 @@
 %       * lowFreqCutoffIdx - (integer) Start index for low-frequency cutoff
 %       * highFreqCutoff - (logical) Flag to apply high-frequency cutoff
 %       * stopHz - (double) Frequency threshold for high-frequency cutoff
+%       * normaliseSpec - (logical) Flag to apply 0-1 normalisation to the
+%           spectrogram
 %   exportOptions - (struct) Settings for export, including:
 %       * exportSpecPng - (logical) Enable PNG export of the spectrogram
 %       * exportSpecPngPath - (string) Directory for PNG export
 %       * exportSpecCsv - (logical) Enable CSV export of the spectrogram
 %       * exportSpecCsvPath - (string) Directory for CSV export
 %       * plotSpec - (logical) Flag to plot the spectrogram
-%   verbose - (logical) Enable verbose output for input validation feedback
 %
 % OUTPUT:
+%   ampls - (double matrix) Regular amplitude spectrogram
+%   P - (double matrix) Power spectrogram data
 %   f - (double array) Frequency values of the spectrogram
 %   t - (double array) Time values of the spectrogram
-%   P - (double matrix) Power spectrogram data
 %
 % REVISION HISTORY:
 %   2024/11/07 - Initial commit to GitHub.
-%
+%   2024/11/08 - Removed `verbose` and `vesselClasses` function parameters
 
-function [f, t, P] = wavToSpec(vesselClass, vesselClasses, currentFilePath, ...
-    processingOptions, spectrogramOptions, exportOptions, verbose)
-
-    if verbose
-        validateInputs(processingOptions, spectrogramOptions, exportOptions);
-    end
+    validateInputs(exportOptions);
 
     [wav, fs] = audioread(currentFilePath);
     
@@ -61,11 +60,12 @@ function [f, t, P] = wavToSpec(vesselClass, vesselClasses, currentFilePath, ...
     [S, f, t] = spectrogram(wav, spectrogramOptions.window, ...
         spectrogramOptions.noverlap, spectrogramOptions.nfft, fs);
     ampls = abs(S);
-    P = 10 * log10(ampls.^2 + 1e-8);
-    
+    P = 10 * log10(ampls.^2 + 1e-8); 
+
     % Apply frequency cutoffs based on settings
     if spectrogramOptions.lowFreqCutoff
         f = f(spectrogramOptions.lowFreqCutoffIdx:end);
+        ampls = ampls(spectrogramOptions.lowFreqCutoffIdx:end, :);
         P = P(spectrogramOptions.lowFreqCutoffIdx:end, :);
     end
     
@@ -73,8 +73,15 @@ function [f, t, P] = wavToSpec(vesselClass, vesselClasses, currentFilePath, ...
         stopHzIdx = find(f >= spectrogramOptions.stopHz, 1);
         if ~isempty(stopHzIdx)
             f = f(1:stopHzIdx);
+            ampls = ampls(1:stopHzIdx, :);
             P = P(1:stopHzIdx, :);
         end
+    end
+
+    % 0-1 normalisation of the spectrograms
+    if spectrogramOptions.normaliseSpec
+        ampls = (ampls - min(ampls(:))) / (max(ampls(:)) - min(ampls(:)));
+        P = (P - min(P(:))) / (max(P(:)) - min(P(:)));
     end
     
     % Plot the spectrogram if enabled
@@ -88,9 +95,7 @@ function [f, t, P] = wavToSpec(vesselClass, vesselClasses, currentFilePath, ...
     
             if ~isfolder(exportOptions.exportSpecPngPath)
                 mkdir(exportOptions.exportSpecPngPath);
-                for i = 1:length(vesselClasses)
-                    mkdir(fullfile(exportOptions.exportSpecPngPath, vesselClasses(i)));
-                end
+                mkdir(fullfile(exportOptions.exportSpecPngPath, vesselClass));
             end
     
             exportgraphics(spec, fullfile(exportOptions.exportSpecPngPath, pngName));
@@ -104,42 +109,23 @@ function [f, t, P] = wavToSpec(vesselClass, vesselClasses, currentFilePath, ...
         
         if ~isfolder(exportOptions.exportSpecCsvPath)
             mkdir(exportOptions.exportSpecCsvPath);
-            for i = 1:length(vesselClasses)
-                mkdir(fullfile(exportOptions.exportSpecCsvPath, vesselClasses(i)));
-            end
+            mkdir(fullfile(exportOptions.exportSpecCsvPath, vesselClass));
         end
     
         writematrix(P', fullfile(exportOptions.exportSpecCsvPath, csvName));
     end
 
-    function validateInputs(processingOptions, spectrogramOptions, exportOptions)    
-        % Check processing options
-        if ~processingOptions.resampleWav
-            disp("Note: resampleWav is disabled. Ignoring resamplingRate.");
-        end
-
-        % Check spectrogram settings
-        if ~spectrogramOptions.lowFreqCutoff
-            disp("Note: lowFreqCutoff is disabled. Ignoring lowFreqCutoffIdx.");
-        end
-        if ~spectrogramOptions.highFreqCutoff
-            disp("Note: highFreqCutoff is disabled. Ignoring stopHz.");
-        end
-    
+    function validateInputs(exportOptions)    
         % Check for PNG export settings
         if exportOptions.exportSpecPng
             assert(~isempty(exportOptions.exportSpecPngPath), ...
                 "exportSpecPng is enabled, but no path provided in exportSpecPngPath.");
-        else
-            disp("Note: exportSpecPng is disabled. Skipping PNG export.");
         end
     
         % Check for CSV export settings
         if exportOptions.exportSpecCsv
             assert(~isempty(exportOptions.exportSpecCsvPath), ...
                 "exportSpecCsv is enabled, but no path provided in exportSpecCsvPath.");
-        else
-            disp("Note: exportSpecCsv is disabled. Skipping CSV export.");
         end
     end
 end
