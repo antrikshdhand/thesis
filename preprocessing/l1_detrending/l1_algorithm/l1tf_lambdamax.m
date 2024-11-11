@@ -20,4 +20,4 @@ D   = [I O O]+[O -2*I O]+[O O I];
 
 lambdamax = norm((D*D')\(D*y),inf);
 
-%disp(sprintf('  lambda_max : %e', lambdamax));
+% disp(sprintf('  lambda_max : %e', lambdamax));

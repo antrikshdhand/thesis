@@ -14,7 +14,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
 % INPUT:
 %   f - (double array) Frequency values of the spectrogram
 %   t - (double array) Time values of the spectrogram
-%   ampls - (double matrix) Original amplitude spectrogram
+%   ampls - (double matrix) Original amplitude spectrogram (f x t)
 %   alphas - (double array) Array of alpha values for L1 detrending
 %   names - (struct) Metadata for naming outputs, including:
 %       * fileName - (string) Name of the input file
@@ -29,10 +29,13 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
 %       * plot3DSurface - (logical) Plot 3D surfaces for the original and 
 %           detrended spectrograms at all alpha values
 %   exportOptions - (struct) Settings for exporting the detrended 
-%       spectrograms as CSV files, including:
+%       spectrograms, including:
 %       * exportSpecCsv - (logical) Enable CSV export of the detrended 
 %           spectrograms
 %       * exportSpecCsvPath - (string) Directory for CSV export
+%       * exportSpecMat - (logical) Enable MAT export of the detrended 
+%           spectrograms
+%       * exportSpecMatPath - (string) Directory for MAT export
 %
 % OUTPUT:
 %   No direct outputs. However, the function generates visualisations and 
@@ -62,7 +65,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         
             % Perform l1 filtering on the ith time segment
             lambda_max = l1tf_lambdamax(t_i);
-    
             for j = 1:length(alphas)
                 alpha = alphas(j);
                 t_i_detrended = l1tf(t_i, alpha * lambda_max);
@@ -73,10 +75,10 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             end
         end
     
-    % Take the absolute value to prevent complex values
-    for i = 1:length(alphas)
-        ampls_detrended_ls{i} = abs(ampls_detrended_ls{i});
-    end
+    % % Take the absolute value to prevent complex values
+    % for i = 1:length(alphas)
+    %     ampls_detrended_ls{i} = abs(ampls_detrended_ls{i});
+    % end
 
     % Plot comparison spectrogram if specified
     if plottingOptions.plotSpec
@@ -90,21 +92,21 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         
         numPlotRows = ceil((length(alphas) + 1) / 2);
         subplot(numPlotRows, 2, 1);
-        imagesc(f, t, ampls);
+        imagesc(f, t, ampls');
         xlabel('Frequency (Hz)');
         ylabel('Time');
         colormap('hot');
         colorbar;
         title('Original');
-
         for i = 1:length(alphas)
             subplot(numPlotRows, 2, i + 1);
-            imagesc(f, t, ampls_detrended_ls{i});
+            imagesc(f, t, ampls_detrended_ls{i}');
             xlabel('Frequency (Hz)');
             ylabel('Time');
             colormap('hot');
             colorbar;
             title(sprintf('alpha=%g', alphas(i)));
+            clim([min(ampls(:)) max(ampls(:))]);
         end
     end
 
@@ -113,9 +115,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
     % Plot one random time segment overlayed with its l1 trend at different
     % alpha values
     if plottingOptions.plotSegTrend
-        % Select a random time segment
-        maxAmplitude = max(ampls(:, random_time_seg));
-
         numPlots = length(alphas) + 1;
         numCols = 2; 
         numRows = ceil(numPlots / numCols);
@@ -150,8 +149,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             % Set plot labels and limits
             xlabel('Frequency (Hz)');
             ylabel('Amplitude');
-            xlim([0 max(f)]);
-            ylim([0 maxAmplitude])
             hold off;
         end
     end
@@ -159,8 +156,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
     % Plot one random time segment overlaid with its detrended versions at 
     % different alpha values
     if plottingOptions.plotSegDetrended
-        maxAmplitude = max(ampls(:, random_time_seg));
-
         numPlots = length(alphas) + 1;
         numCols = 2;
         numRows = ceil(numPlots / numCols);
@@ -189,8 +184,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             end
             xlabel('Frequency (Hz)');
             ylabel('Amplitude');
-            xlim([0 max(f)]);
-            ylim([0, maxAmplitude]);
             hold off;
         end
     end
@@ -216,8 +209,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         ylabel('Time');
         zlabel('Amplitude');
         title('Original 3D Surface');
-        xlim([0, max(f)]);
-        ylim([0, max(t)]);
 
         % Plot each detrended spectrogram for different alpha values
         for i = 1:length(alphas)
@@ -227,8 +218,6 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             ylabel('Time');
             zlabel('Amplitude');
             title(sprintf('Detrended 3D surface (alpha=%g)', alphas(i)));
-            xlim([0, max(f)]);
-            ylim([0, max(t)]);
         end
     end
 
@@ -237,16 +226,47 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         if ~isfolder(exportOptions.exportSpecCsvPath)
             mkdir(exportOptions.exportSpecCsvPath);
         end
-        if ~isfolder(fullfile(exportOptions.exportSpecCsvPath, names.className))
-            mkdir(fullfile(exportOptions.exportSpecCsvPath, names.className));
-        end
         for i = 1:length(alphas)
+            alpha_folder = fullfile(exportOptions.exportSpecCsvPath, "alpha_" + alphas(i));
+            if ~isfolder(alpha_folder)
+                mkdir(alpha_folder);
+            end
+            if ~isfolder(fullfile(alpha_folder, names.className))
+                mkdir(fullfile(alpha_folder, names.className));
+            end
+
+            [~, name, ~] = fileparts(names.fileName); 
             csvFilename = fullfile( ...
-                exportOptions.exportSpecCsvPath, ...
+                alpha_folder, ...
                 names.className, ...
-                sprintf('%s_alpha_%g.csv', names.fileName, alphas(i)) ...
+                [name, '.csv'] ...
             );
             writematrix(ampls_detrended_ls{i}, csvFilename);
+        end
+    end
+
+    % Export to MAT if specified
+    if exportOptions.exportSpecMat
+        if ~isfolder(exportOptions.exportSpecMatPath)
+            mkdir(exportOptions.exportSpecMatPath);
+        end
+        for i = 1:length(alphas)
+            alpha_folder = fullfile(exportOptions.exportSpecMatPath, "alpha_" + alphas(i));
+            if ~isfolder(alpha_folder)
+                mkdir(alpha_folder);
+            end
+            if ~isfolder(fullfile(alpha_folder, names.className))
+                mkdir(fullfile(alpha_folder, names.className));
+            end
+
+            [~, name, ~] = fileparts(names.fileName); 
+            matFilepath = fullfile( ...
+                alpha_folder, ...
+                names.className, ...
+                [name, '.mat'] ...
+            );
+            ampls_detrended_exp = ampls_detrended_ls{i};
+            save(matFilepath, 'ampls_detrended_exp');
         end
     end
 
