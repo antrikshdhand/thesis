@@ -1,2 +1,3 @@
-# thesis-uatr
-Codebase for my thesis in underwater acoustic target recognition
+# Underwater Acoustic Target Recognition with DeepShip
+
+This repository holds all the code for my thesis project on underwater acoustic target recognition (UATR). This repository would make for a great starting point for any future researchers looking to get involved in the field. I will endeavour to document my processes to the best of my ability, making it easy to understand for someone completely new to the field, as I was at the beginning of my thesis.
