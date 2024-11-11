@@ -5,7 +5,8 @@ import scipy.io
 from typing import Literal
 
 def rename_folds(fold_definitions: pd.DataFrame, new_path_to_root: str, 
-                  unix: bool, ext: Literal['csv', 'npz', 'mat']):
+                  unix: bool, ext: Literal['csv', 'npz', 'mat'],
+                  label_encodings: dict):
     """
     Replaces paths in the original fold definition csv with user's local setup.
     Replaces .wav with .csv, .npz or .mat depending on `ext`. 
@@ -17,13 +18,18 @@ def rename_folds(fold_definitions: pd.DataFrame, new_path_to_root: str,
     :param bool unix: Whether to conform to unix-style paths or not.
     :param str format: What format the files are saved as. One of ['csv', 'npz',
         'mat']
+    :param dict label_encodings: A dictionary defining the mapping of 
+        integer encodings used in the fold definition file to class labels.
     :return pd.DataFrame fold_definitions: The updated DataFrame of fold 
         definitions with the `files` column renamed to the current user setup.
     """
 
-    # Points to the folder that contains the class subfolders in the csv file.
-    prev_path_to_root = fold_definitions.iloc[0, 0].split("/Passengership")[0]
+    fold_definitions = fold_definitions.copy()
     
+    # Points to the folder that contains the class subfolders in the csv file.
+    first_entry_label = fold_definitions["labels"].iloc[0]
+    prev_path_to_root = fold_definitions.iloc[0, 0].split(f"/{label_encodings[first_entry_label]}")[0]
+
     fold_definitions['files'] = fold_definitions['files'].apply(
         lambda x: x.replace(prev_path_to_root, new_path_to_root)
     )
@@ -79,8 +85,9 @@ def get_fold_dfs(fold_definition_csv: str, new_path_to_root: str,
     fold_definitions = rename_folds(
         fold_definitions, 
         new_path_to_root,
-        unix=False,
-        ext=ext
+        unix=unix,
+        ext=ext,
+        label_encodings=label_encodings
     )
 
     actual_n_folds = max(fold_definitions['folds']) + 1
@@ -268,7 +275,7 @@ class DeepShipGenerator(keras.utils.Sequence):
     def __init__(self, df, ext, mat_var_name=None,
                  classes=['Cargo', 'Passengership', 'Tanker', 'Tug'],
                  batch_size=8, input_size=(192, 192, 1), shuffle=True,
-                 conv_channel=False):
+                 conv_channel=True, X_only=False):
         """
         Generator for loading spectrogram data in batches.
         
@@ -280,6 +287,7 @@ class DeepShipGenerator(keras.utils.Sequence):
         :param input_size: Expected input dimensions (height, width, channels).
         :param shuffle: Whether to shuffle the data at the end of each epoch.
         :param conv_channel: Whether to add a channel dimension for CNN input.
+        :param X_only: Whether to output tuples of (X, X), useful for autoencoders.
         """
         self.df = df
         self.ext = ext
@@ -289,6 +297,7 @@ class DeepShipGenerator(keras.utils.Sequence):
         self.input_size = input_size
         self.shuffle = shuffle
         self.conv_channel = conv_channel
+        self.X_only = X_only
 
         self.n = len(self.df)
         self.n_classes = len(classes)
@@ -331,7 +340,13 @@ class DeepShipGenerator(keras.utils.Sequence):
         # Select the batch data
         batch_df = self.df.iloc[index * self.batch_size:(index + 1) * self.batch_size]
 
-        return self.__get_x(batch_df), self.__get_y(batch_df)
+        X = self.__get_x(batch_df)
+        y = self.__get_y(batch_df)
+
+        if self.X_only:
+            return X, X
+        else:
+            return X, y
 
     def on_epoch_end(self):
         """
