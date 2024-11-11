@@ -21,21 +21,26 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
 %       * noverlap - (integer) Overlap length for spectrogram
 %       * nfft - (integer) FFT length
 %       * lowFreqCutoff - (logical) Flag to apply low-frequency cutoff
-%       * lowFreqCutoffIdx - (integer) Start index for low-frequency cutoff
+%       * startHz - (integer) Frequency threshold for low-frequency cutoff
 %       * highFreqCutoff - (logical) Flag to apply high-frequency cutoff
 %       * stopHz - (double) Frequency threshold for high-frequency cutoff
 %       * normaliseSpec - (logical) Flag to apply 0-1 normalisation to the
 %           spectrogram
+%       * resize - (logical) Flag to resize spectrogram before export
 %   exportOptions - (struct) Settings for export, including:
 %       * exportSpecPng - (logical) Enable PNG export of the spectrogram
 %       * exportSpecPngPath - (string) Directory for PNG export
+%       * exportWithAxes - (logical) Whether to keep spectrogram axes
+%           in the exported PNG file
 %       * exportSpecCsv - (logical) Enable CSV export of the spectrogram
 %       * exportSpecCsvPath - (string) Directory for CSV export
 %       * plotSpec - (logical) Flag to plot the spectrogram
+%       * exportSpecMat - (logical) Enable MAT export of the spectrogram
+%       * exportSpecMatPath - (string) Directory for MAT export
 %
 % OUTPUT:
-%   ampls - (double matrix) Regular amplitude spectrogram
-%   P - (double matrix) Power spectrogram data
+%   ampls - (double matrix) Regular amplitude spectrogram (f x t)
+%   P - (double matrix) Power spectrogram data (f x t)
 %   f - (double array) Frequency values of the spectrogram
 %   t - (double array) Time values of the spectrogram
 %
@@ -60,13 +65,25 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
     [S, f, t] = spectrogram(wav, spectrogramOptions.window, ...
         spectrogramOptions.noverlap, spectrogramOptions.nfft, fs);
     ampls = abs(S);
-    P = 10 * log10(ampls.^2 + 1e-8); 
+
+    P = 10 * log10(ampls.^2 + 1e-8); % dB scale
+
+    low_threshold = -30;
+    P(P < low_threshold) = low_threshold;
+
+    % disp(['Max amplitude before cutoffs: ', num2str(max(ampls(:)))]);
+    % disp(['Min amplitude before cutoffs: ', num2str(min(ampls(:)))]);
+    %disp(max(P(:))); 
+    %disp(min(P(:)));
 
     % Apply frequency cutoffs based on settings
     if spectrogramOptions.lowFreqCutoff
-        f = f(spectrogramOptions.lowFreqCutoffIdx:end);
-        ampls = ampls(spectrogramOptions.lowFreqCutoffIdx:end, :);
-        P = P(spectrogramOptions.lowFreqCutoffIdx:end, :);
+        startHzIdx = find(f >= spectrogramOptions.startHz, 1);
+        if ~isempty(startHzIdx)
+            f = f(startHzIdx:end);
+            ampls = ampls(startHzIdx:end, :);
+            P = P(startHzIdx:end, :);
+        end
     end
     
     if spectrogramOptions.highFreqCutoff
@@ -78,41 +95,70 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
         end
     end
 
+    % disp(['Max amplitude after cutoffs: ', num2str(max(ampls(:)))]);
+    % disp(['Min amplitude after cutoffs: ', num2str(min(ampls(:)))]);
+
     % 0-1 normalisation of the spectrograms
     if spectrogramOptions.normaliseSpec
         ampls = (ampls - min(ampls(:))) / (max(ampls(:)) - min(ampls(:)));
         P = (P - min(P(:))) / (max(P(:)) - min(P(:)));
     end
-    
-    % Plot the spectrogram if enabled
-    if exportOptions.plotSpec || exportOptions.exportSpecPng
-        [~, name, ~] = fileparts(currentFilePath);
-        plotTitle = sprintf('%s (%s) PS', name, vesselClass);
-        spec = plotSpectrogram(f, t, P', plotTitle, exportOptions.plotSpec);
 
-        if exportOptions.exportSpecPng
-            pngName = fullfile(vesselClass, [name, '.png']); % e.g. "Cargo/ADVENTURE_1-70-20171207_seg001.png"
-    
-            if ~isfolder(exportOptions.exportSpecPngPath)
-                mkdir(exportOptions.exportSpecPngPath);
-                mkdir(fullfile(exportOptions.exportSpecPngPath, vesselClass));
-            end
-    
-            exportgraphics(spec, fullfile(exportOptions.exportSpecPngPath, pngName));
+    % Resize spectrogram if enabled
+    if spectrogramOptions.resize
+        P = imresize(P, [192 192]);
+    end
+
+    % Plot the power spectrogram if enabled
+    [~, name, ~] = fileparts(currentFilePath);
+    plotTitle = sprintf('%s (%s) PS', name, vesselClass);
+
+    if exportOptions.plotSpec
+        plotSpectrogram(f, t, P', plotTitle, true, true);
+    end
+
+    % Export the power spectrogram if enabled
+    if exportOptions.exportSpecPng
+        if exportOptions.exportWithAxes
+            spec = plotSpectrogram(f, t, P', plotTitle, false, true);
+        else
+            spec = plotSpectrogram(f, t, P', plotTitle, false, false);
         end
+
+        pngDir = fullfile(exportOptions.exportSpecPngPath, vesselClass);
+        if exportOptions.exportSpecPng && ~isfolder(pngDir)
+            mkdir(pngDir);
+        end
+        
+        pngName = fullfile(vesselClass, [name, '.png']); % e.g. "Cargo/ADVENTURE_1-70-20171207_seg001.png"
+        exportgraphics(spec, fullfile(exportOptions.exportSpecPngPath, pngName));
     end
     
     % Export CSV if enabled
     if exportOptions.exportSpecCsv
         [~, name, ~] = fileparts(currentFilePath); 
-        csvName = fullfile(vesselClass, [name, '.csv']);
-        
-        if ~isfolder(exportOptions.exportSpecCsvPath)
-            mkdir(exportOptions.exportSpecCsvPath);
-            mkdir(fullfile(exportOptions.exportSpecCsvPath, vesselClass));
+
+        csvDir = fullfile(exportOptions.exportSpecCsvPath, vesselClass);
+        if exportOptions.exportSpecCsv && ~isfolder(csvDir)
+            mkdir(csvDir);
         end
-    
+
+        csvName = fullfile(vesselClass, [name, '.csv']);
         writematrix(P', fullfile(exportOptions.exportSpecCsvPath, csvName));
+    end
+
+    % Export as MAT if enabled
+    if exportOptions.exportSpecMat
+        [~, name, ~] = fileparts(currentFilePath); 
+
+        matDir = fullfile(exportOptions.exportSpecMatPath, vesselClass);
+        if exportOptions.exportSpecMat && ~isfolder(matDir)
+            mkdir(matDir);
+        end
+
+        matName = fullfile(vesselClass, [name, '.mat']);
+        Ptrans = P';
+        save(fullfile(exportOptions.exportSpecMatPath, matName), 'Ptrans');
     end
 
     function validateInputs(exportOptions)    
@@ -128,14 +174,21 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
                 "exportSpecCsv is enabled, but no path provided in exportSpecCsvPath.");
         end
     end
+
+    function spectrogram = plotSpectrogram(f, t, ampls, plotTitle, visible, showAxes)
+        spectrogram = figure('Visible', visible);
+        ax = axes(spectrogram); 
+        imagesc(ax, f, t, ampls);
+        colormap(ax, 'hot');
+    
+        if ~showAxes
+            set(ax, 'XTick', [], 'YTick', [], 'Box', 'off'); 
+        else
+            xlabel(ax, 'Frequency (Hz)');
+            ylabel(ax, 'Time');
+            colorbar(ax);
+            title(ax, plotTitle, 'Interpreter', 'none');
+        end
+    end
 end
 
-function spectrogram = plotSpectrogram(f, t, ampls, plotTitle, visible)
-    spectrogram = figure('Visible', visible);
-    imagesc(f, t, ampls);
-    xlabel('Frequency (Hz)');
-    ylabel('Time');
-    colormap('hot');
-    colorbar;
-    title(plotTitle, 'Interpreter', 'none');
-end
