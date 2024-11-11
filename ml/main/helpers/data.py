@@ -119,51 +119,55 @@ def get_fold_dfs(fold_definition_csv: str, new_path_to_root: str,
 
     return fold_dfs
 
-
-def import_spectrogram(fold_df: pd.DataFrame, 
-                        ext: Literal['csv', 'npz', 'mat'], mat_var_name=None):
+def import_spectrogram(df: pd.DataFrame, ext: Literal['csv', 'npz', 'mat'], 
+                       mat_var_name=None, source_col: str = 'files',
+                       dest_col: str = 'spectrogram'):
     """
-    Loads spectrogram data from the `files` column of a single fold DataFrame and 
-    attaches it as a new column `spectrogram`. The function supports loading 
+    Loads spectrogram data from `source_col` column of a single fold DataFrame and 
+    attaches it as a new column `dest_col`. The function supports loading 
     data from `.npz`, `.csv`, and `.mat` file formats.
 
-    :param pd.DataFrame fold_df: A DataFrame containing a column `files` 
-        with file paths to the spectrogram data for a particular fold.
+    :param pd.DataFrame df: A DataFrame containing a column `source_col` 
+        with file paths to the spectrogram data.
     :param str ext: The file extension of the spectrogram data ('csv', 'npz', or 'mat').
-    :param str mat_var_name: The variable name within the `.mat` files to load 
-        if `ext` is 'mat'. This is required when loading MATLAB `.mat` files.
-    :return pd.DataFrame: The updated DataFrame with a `spectrogram` column 
-        containing the loaded data, and with the `files` column removed.
+    :param str mat_var_name: The variable name within the `.mat` files to load. 
+        This is required when loading MATLAB `.mat` files.
+    :param str source_col: The name of the column containing the file paths.
+    :param str dest_col: The name of the column to store the spectrograms.
+    :return pd.DataFrame: The updated DataFrame with `dest_col` column 
+        containing the loaded data, and with the `source_col` column removed.
     :raises ValueError: If `mat_var_name` is not provided for `.mat` files or if 
         an unsupported file extension is used.
     """
-    fold_df = fold_df.copy()
+    df = df.copy()
+
     if ext == 'npz':
-        fold_df.loc[:, 'spectrogram'] = fold_df['files'].apply(
+        df.loc[:, dest_col] = df[source_col].apply(
             lambda x: np.load(x)['np_data']
         )
     elif ext == 'csv':
-        fold_df.loc[:, 'spectrogram'] = fold_df['files'].apply(
+        df.loc[:, dest_col] = df[source_col].apply(
             lambda x: pd.read_csv(x, header=None).values
         )
     elif ext == 'mat':
         if not mat_var_name:
             raise ValueError("Must provide MAT variable name if ext=mat.")
-        fold_df.loc[:, 'spectrogram'] = fold_df.loc[:, 'files'].apply(
+        df.loc[:, dest_col] = df.loc[:, source_col].apply(
             lambda x: scipy.io.loadmat(x)[mat_var_name]
         )
     else:
         raise ValueError("Unsupported file extension. Use 'npz', 'csv', or 'mat'.")
     
-    fold_df = fold_df.drop(columns=['files'])
+    df = df.drop(columns=[source_col])
 
-    return fold_df
+    return df
 
 def import_spectrograms(fold_dfs: list[pd.DataFrame], 
-                        ext: Literal['csv', 'npz', 'mat'], mat_var_name=None):
+                        ext: Literal['csv', 'npz', 'mat'], mat_var_name=None,
+                        source_col: str = 'files', dest_col: str = 'spectrogram'):
     """
-    Loads spectrogram data from the `files` column of each fold in `fold_dfs` and 
-    attaches it as a new column `spectrogram`. Supports loading from `.npz`, 
+    Loads spectrogram data from `source_col` column of each fold in `fold_dfs` 
+    and attaches it as a new column `dest_col`. Supports loading from `.npz`, 
     `.csv`, and `.mat` file formats.
 
     :param list[pd.DataFrame] fold_dfs: A list of DataFrames, each representing 
@@ -172,6 +176,8 @@ def import_spectrograms(fold_dfs: list[pd.DataFrame],
     :param str ext: The file extension of the spectrogram data ('csv', 'npz', or 'mat').
     :param str mat_var_name: The variable name within the `.mat` files to load 
         if `ext` is 'mat'. This is required when loading MATLAB `.mat` files.
+    :param str source_col: The name of the column containing the file paths.
+    :param str dest_col: The name of the column to store the spectrograms.
     :return list[pd.DataFrame]: The updated list of DataFrames, each containing 
         a `spectrogram` column with the loaded data, and without the `files` column.
     """
@@ -228,53 +234,11 @@ def generate_kth_fold(fold_dfs: list[pd.DataFrame], test_idx: int, val_idx=None)
         return train_df, test_df
 
 
-def get_train_test_split(train_df: pd.DataFrame, test_df: pd.DataFrame,
-                         conv_channel: bool, verbose=False,
-                         classes=['Cargo', 'Passengership', 'Tanker', 'Tug']):
-    """
-    Given one dataframe containing all the data points to be used for training,
-    and one dataframe containing all the data points to be used for testing,
-    this function will return the X_train, X_test, y_train, y_test arrays to be
-    used for model fitting and validation.
-
-    The dataframes should have columns:
-    ['class1', 'class2', ..., 'classn', 'spectrogram'].
-
-    If `conv == true` then a channel dimension is added to `X_train` and
-    `X_test` to be used with convolution operations.
-    """
-
-    X_train = train_df['spectrogram'].to_numpy(copy=True)
-    X_test = test_df['spectrogram'].to_numpy(copy=True)
-
-    X_train = np.stack(X_train)
-    X_test = np.stack(X_test)
-
-    if conv_channel: # Add channel dim for CNN
-        # X_train and X_test should have 4 dimensions:
-        # (number of samples, number of time bins, number of freqs, channel)
-        X_train = np.expand_dims(X_train, axis=-1) 
-        X_test = np.expand_dims(X_test, axis=-1)
-
-    y_train = train_df[classes].to_numpy(copy=True)
-    y_test = test_df[classes].to_numpy(copy=True)
-
-    if verbose:
-        print()
-        print("Data dimensions:")
-        print('X_train shape:', X_train.shape)
-        print('X_test shape:', X_test.shape)
-        print('y_train shape:', y_train.shape)
-        print('y_test shape:', y_test.shape)
-
-    return X_train, X_test, y_train, y_test
-
-
 class DeepShipGenerator(keras.utils.Sequence):
 
     def __init__(self, df, ext, mat_var_name=None,
                  classes=['Cargo', 'Passengership', 'Tanker', 'Tug'],
-                 batch_size=8, input_size=(192, 192, 1), shuffle=True,
+                 batch_size=32, shuffle=True,
                  conv_channel=True, X_only=False):
         """
         Generator for loading spectrogram data in batches.
@@ -284,7 +248,6 @@ class DeepShipGenerator(keras.utils.Sequence):
         :param mat_var_name: Variable name in .mat files if applicable.
         :param classes: List of class labels (for one-hot encoding).
         :param batch_size: Size of each batch.
-        :param input_size: Expected input dimensions (height, width, channels).
         :param shuffle: Whether to shuffle the data at the end of each epoch.
         :param conv_channel: Whether to add a channel dimension for CNN input.
         :param X_only: Whether to output tuples of (X, X), useful for autoencoders.
@@ -294,14 +257,11 @@ class DeepShipGenerator(keras.utils.Sequence):
         self.mat_var_name = mat_var_name
         self.classes = classes
         self.batch_size = batch_size
-        self.input_size = input_size
         self.shuffle = shuffle
         self.conv_channel = conv_channel
         self.X_only = X_only
 
         self.n = len(self.df)
-        self.n_classes = len(classes)
-        self.y_col = classes  
         
         # Shuffle the data initially
         if self.shuffle:
@@ -318,7 +278,8 @@ class DeepShipGenerator(keras.utils.Sequence):
         Load spectrograms for the batch.
         """
         # Import spectrograms for each file in the batch
-        batch_df = import_spectrogram(batch_df, self.ext, self.mat_var_name)
+        batch_df = import_spectrogram(batch_df, self.ext, self.mat_var_name,
+                                      source_col='files', dest_col='spectrogram')
         X = np.stack(batch_df['spectrogram'].to_numpy(copy=True))
 
         # Add channel dimension if using convolutional layers
@@ -331,7 +292,7 @@ class DeepShipGenerator(keras.utils.Sequence):
         """
         Get one-hot encoded labels for the batch.
         """
-        return batch_df[self.y_col].to_numpy(copy=True)
+        return batch_df[self.classes].to_numpy(copy=True)
 
     def __getitem__(self, index):
         """
@@ -356,117 +317,61 @@ class DeepShipGenerator(keras.utils.Sequence):
             self.df = self.df.sample(frac=1).reset_index(drop=True)
 
 
-# def get_splits_for_all_folds(fold_dfs: list[pd.DataFrame], conv_channel=False,
-#                              verbose=False):
-#     """
-#     Returns a list of k dictionaries each containing 
-#     `X_train`, `X_test`, `y_train`, and `y_test` for the k-th fold.
-#     """
-#     k_folds = []
+class N2NGenerator(keras.utils.Sequence):
 
-#     for k in range(len(fold_dfs)):
-#         if verbose:
-#             print(f'\nProcessing fold: {k + 1}')
+    def __init__(self, df, ext, mat_var_name=None, batch_size=32, shuffle=True,
+                 conv_channel=True):
 
-#         kth_dict = {}
+        self.df = df 
+        self.ext = ext
+        self.mat_var_name = mat_var_name
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.conv_channel = conv_channel
 
-#         train_df, test_df = generate_kth_fold(fold_dfs, k)
-#         X_train, X_test, y_train, y_test = \
-#             get_train_test_split(train_df, test_df, conv_channel=conv_channel, 
-#                                  verbose=verbose)
+        self.n = len(df)
 
-#         kth_dict['X_train'] = X_train
-#         kth_dict['X_test'] = X_test
-#         kth_dict['y_train'] = y_train
-#         kth_dict['y_test'] = y_test
+        if self.shuffle:
+            self.on_epoch_end()
 
-#         k_folds.append(kth_dict)
+    def __len__(self):
+        """
+        Number of batches per epoch.
+        """
+        return self.n // self.batch_size
 
-#     return k_folds
+    def __get_data(self, batch_df):
+        """
+        Load both X and y spectrograms for the batch.
+        """
 
-# def normalise_spectrograms(k_folds: list[dict]):
-#     """
-#     Given a list of k dictionaries, each containing the 
-#     `X_train`, `X_test`, `y_train`, and `y_test` for the k-th fold, this
-#     function will normalise both the X_train and X_test spectrograms using
-#     the global max and min.
-#     """
+        # First convert X spectrogram
+        batch_df = import_spectrogram(batch_df, ext='mat', mat_var_name='Pexp',
+                                      source_col='file_path_1', dest_col='spec_1')
+        # Then convert y spectrogram
+        batch_df = import_spectrogram(batch_df, ext='mat', mat_var_name='Pexp',
+                                      source_col='file_path_2', dest_col='spec_2')
+        
+        X = np.stack(batch_df['spec_1'].to_numpy(copy=True))
+        y = np.stack(batch_df['spec_2'].to_numpy(copy=True))
 
-#     maximums = []
-#     minimums = []
-#     for kth_dict in k_folds:
-#         maximums.append(kth_dict['X_train'].max())
-#         maximums.append(kth_dict['X_test'].max())
+        X = np.expand_dims(X, axis=-1)
+        y = np.expand_dims(y, axis=-1)
 
-#         minimums.append(kth_dict['X_train'].min())
-#         minimums.append(kth_dict['X_test'].min())
-    
-#     maximum = max(maximums)
-#     minimum = min(minimums)
+        return X, y
 
-#     for kth_dict in k_folds:
-#         kth_dict['X_train'] = (kth_dict['X_train'] - minimum) / (maximum - minimum)
-#         kth_dict['X_test'] = (kth_dict['X_test'] - minimum) / (maximum - minimum)
-    
-#     return k_folds
+    def __getitem__(self, index):
+        """
+        Generate one batch of data.
+        """
 
+        batch_df = self.df.iloc[index * self.batch_size:(index + 1) * self.batch_size]
 
-# ##### tf.data.Dataset #####
+        return self.__get_data(batch_df)
 
-# def generator(X, y):
-#     for i in range(len(X)):
-#         yield X[i], y[i]
-
-# def convert_to_tf_dataset(X, y, batch_size=32):
-#     output_signature = (
-#         tf.TensorSpec(shape=X.shape[1:], dtype=tf.float32),  # Shape of individual input sample
-#         tf.TensorSpec(shape=y.shape[1:], dtype=tf.float32)   # Shape of individual label
-#     )
-    
-#     dataset = tf.data.Dataset.from_generator(
-#         lambda: generator(X, y), 
-#         output_signature=output_signature
-#     )
-
-#     return dataset.batch(batch_size)
-
-# def get_tf_datasets_for_all_folds(fold_dfs: list[pd.DataFrame],
-#                                   conv_channel=False, validation_split=None,
-#                                   verbose=False):
-#     """ 
-#     Returns a list of k tuples each containing a `tf.data.Dataset` for training 
-#     (index 0), testing (index 1), and optionally for validation (index 2).
-
-#     :param list[pd.DataFrame] fold_dfs: A list of fold dataframes.
-#     :param bool conv_channel: Whether to add an extra dimension for convs.
-#     :param float validation_split: Percentage of training dataset to use for
-#         validation data. If `None`, no validation dataset is created.
-#     """
-#     k_folds = []
-#     for k in range(len(fold_dfs)):
-#         if verbose:
-#             print(f'\nProcessing fold: {k + 1}')
-
-#         train_df, test_df = generate_kth_fold(fold_dfs, k)
-#         X_train, X_test, y_train, y_test = \
-#             get_train_test_split(train_df, test_df, conv_channel=conv_channel, 
-#                                  verbose=verbose)
-
-#         train_dataset = convert_to_tf_dataset(X_train, y_train)
-#         test_dataset = convert_to_tf_dataset(X_test, y_test)
-
-#         if validation_split:
-#             if validation_split < 0 or validation_split > 1:
-#                 raise Exception('Validation split should be between 0 and 1') 
-            
-#             train_dataset, validation_dataset = tf.keras.utils.split_dataset(
-#                 train_dataset,
-#                 right_size=validation_split,
-#                 shuffle=False
-#             )
-            
-#             k_folds.append((train_dataset, test_dataset, validation_dataset))
-#         else:
-#             k_folds.append((train_dataset, test_dataset))
-
-#     return k_folds
+    def on_epoch_end(self):
+        """
+        Shuffle the data at the end of each epoch.
+        """
+        if self.shuffle:
+            self.df = self.df.sample(frac=1).reset_index(drop=True)
