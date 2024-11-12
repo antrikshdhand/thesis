@@ -1,6 +1,10 @@
-deepship_5k_seg_3s : Original folds created by Mark for the complete DeepShip dataset.
-deepship_5k_seg_3s_tiny : 15 segments from each fold in each class for a total of 15 * 10 * 4 = 600 data points.
+# CLASSIFICATION TASKS #
+- deepship_5k_seg_3s : Original folds created by Mark for the complete DeepShip 
+    dataset.
+- deepship_5k_seg_3s_tiny : 15 segments from each fold in each class for a total 
+    of 15 * 10 * 4 = 600 data points. Created using `get_subset.py`
 
-deepship_pairs_2 : The output from organise_pairs.py.
-deepship_pairs_2_small : A subset of 2000 pairs.
-deepship_pairs_2_tiny : A subset of 500 pairs.
+# DENOISING N2N #
+- deepship_pairs_diff_recording
+- deepship_pairs_same_recording
+These are both outputs of `organise_pairs.py`.
