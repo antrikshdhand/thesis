@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
-import keras
 import scipy.io
-import os
-from typing import Literal, Optional, List
+from typing import Literal
 
 def rename_folds(fold_definitions: pd.DataFrame, new_path_to_root: str, 
                   unix: bool, ext: Literal['csv', 'npz', 'mat'],

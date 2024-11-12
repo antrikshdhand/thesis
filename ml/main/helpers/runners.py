@@ -7,7 +7,7 @@ import gc
 from typing import Literal, List, Dict, Any, Optional, Tuple
 
 from helpers import data
-from helpers.data import DeepShipGenerator
+from helpers.generators import DeepShipGenerator
 
 def k_fold_cross_validation(
     fold_dfs: List[pd.DataFrame],
