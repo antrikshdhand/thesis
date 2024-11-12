@@ -30,6 +30,8 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
 %           detrended spectrograms at all alpha values
 %   exportOptions - (struct) Settings for exporting the detrended 
 %       spectrograms, including:
+%       * resizeSpec - (logical) Resize spectrograms to 192x192 before
+%           export
 %       * exportSpecCsv - (logical) Enable CSV export of the detrended 
 %           spectrograms
 %       * exportSpecCsvPath - (string) Directory for CSV export
@@ -221,6 +223,13 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         end
     end
 
+    % Resize spectrogram if specified
+    if exportOptions.resizeSpec
+        for i = 1:length(alphas)
+            ampls_detrended_ls{i} = imresize(ampls_detrended_ls{i}, [192 192]);
+        end
+    end
+
     % Export to CSV if specified
     if exportOptions.exportSpecCsv
         if ~isfolder(exportOptions.exportSpecCsvPath)
@@ -265,6 +274,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
                 names.className, ...
                 [name, '.mat'] ...
             );
+
             ampls_detrended_exp = ampls_detrended_ls{i};
             save(matFilepath, 'ampls_detrended_exp');
         end

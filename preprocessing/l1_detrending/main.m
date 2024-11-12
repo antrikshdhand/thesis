@@ -2,7 +2,7 @@
 % This script performs l1 detrending on a few samples of the DeepShip dataset, 
 % located in `rootDir` (which contains 4 class folders).
 
-addpath("../convert_wav_to_spec");
+addpath("../wav_to_spec");
 addpath("l1_algorithm")
 
 %%% wavToSpec options %%%
@@ -36,17 +36,17 @@ exportOptions.exportSpecMat = false;
 
 %%% Perform l1 detrending %%%
 
-rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/acml_2024_s2/raw_datasets/deepship/DeepShip_5k_seg_3s');
+rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/thesis-ml/raw_datasets/deepship/DeepShip_5k_seg_3s');
 VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
 close all;
 
-for i = 4:4%length(VESSEL_CLASSES)
+for i = 1:length(VESSEL_CLASSES)
     vesselClass = VESSEL_CLASSES{i};
     classDir = dir(fullfile(rootDir, vesselClass, '*.wav'));
     
     parfor j = 1:length(classDir)
-        currentFile = classDir(j).name
+        currentFile = classDir(j).name;
         currentFilePath = fullfile(rootDir, vesselClass, currentFile);
 
         [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
@@ -62,6 +62,7 @@ for i = 4:4%length(VESSEL_CLASSES)
         l1PlottingOptions.plot3DSurface = false;
 
         l1ExportOptions = struct();
+        l1ExportOptions.resizeSpec = true;
         l1ExportOptions.exportSpecCsv = false;
         l1ExportOptions.exportSpecCsvPath = "detrended_specs_csv";
         l1ExportOptions.exportSpecMat = true;
