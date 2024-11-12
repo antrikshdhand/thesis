@@ -27,7 +27,7 @@ spectrogramOptions.resize = true;
 exportOptions.plotSpec = false;
 exportOptions.exportSpecPng = true;
 exportOptions.exportWithAxes = false;
-exportOptions.exportSpecPngPath = "specs_ships_multiple_recordings";
+exportOptions.exportSpecPngPath = "spectrograms";
 exportOptions.exportSpecCsv = false;
 exportOptions.exportSpecMat = false;
 

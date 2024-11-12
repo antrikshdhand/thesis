@@ -1,0 +1,14 @@
+multiple_recordings.m : Outputs spectrograms for those vessels which have 
+multiple unique recordings (different dates) associated with them.
+The output of multiple_recordings.m is the folder `spectrograms` (folders 
+were flattened).
+The inner loop of `multiple_recordings.m` was limited to 1000, which means not 
+all vessels which could have been exported were exported. This leaves us with 
+2684 spectrograms.
+`ships_with_multiple_recordings.csv` is the output from the helper script
+`organise_pairs.py` which can be found in the DATASET_CSVS directory. This
+csv is used by multiple_recordings.m
+
+## MATLAB GROUND TRUTH FILES FOR IMAGE SEGMENTATION ##
+gTruth.mat
+PixelLabelData
