@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import random
 from typing import Literal
 
@@ -34,22 +35,10 @@ def get_dataset_info(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
             ships[ship_name][date] = seg
             
             file_path = os.path.join(class_path, file_name)
-            all_files.append((ship_name, file_path, date, seg))
+            all_files.append((ship_name, class_folder, file_path, date, seg))
 
-    all_files_df = pd.DataFrame(all_files, columns=['ship_name', 'file_path', 'date', 'seg'])
+    all_files_df = pd.DataFrame(all_files, columns=['ship_name', 'class', 'file_path', 'date', 'seg'])
     return all_files_df, ships 
-
-def filter_ships_with_multiple_recordings(all_files_df: pd.DataFrame, ships: dict):
-    """
-    Filters ships with multiple recording dates.
-
-    :param all_files_df: DataFrame containing all files metadata.
-    :param ships: Dictionary with recording information for each ship.
-    :return: DataFrame with only ships having multiple recording dates.
-    """
-    ships_multiple_recordings = {k: v for k, v in ships.items() if len(v) > 1}
-    multiple_recordings_df = all_files_df[all_files_df["ship_name"].isin(ships_multiple_recordings)]
-    return multiple_recordings_df
 
 def make_pairs_different_recording(multiple_recordings_df: pd.DataFrame):
     """
@@ -121,8 +110,14 @@ def main(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
     """
     all_files_df, ships = get_dataset_info(path_to_root, ext)
 
+    # Filter ships which have multiple recordings
+    ships_multiple_recordings = {k: v for k, v in ships.items() if len(v) > 1}
+    multiple_recordings_df = all_files_df[all_files_df["ship_name"].isin(ships_multiple_recordings)]
+
+    ships_with_multiple_recordings = multiple_recordings_df[["ship_name", "class"]].drop_duplicates()
+    ships_with_multiple_recordings.to_csv("ships_with_multiple_recordings.csv", index=False)
+
     # Create pairs from different recordings
-    multiple_recordings_df = filter_ships_with_multiple_recordings(all_files_df, ships)
     diff_recordings_pairs = make_pairs_different_recording(multiple_recordings_df)
 
     # Create pairs from the same recording

@@ -1,16 +1,15 @@
-% This is an example of how you would use the wavToSpec() function.
-% This script converts the DeepShip dataset, located in `rootDir` (which 
-% contains 4 class folders), into power spectrograms, and exports both
-% the csvs and the spectrogram plots into the current working directory.
+% This script exports the spectrogram PNGs of ONLY the vessels which have
+% multiple recordings, as defined in `ships_with_multiple_recordings.csv` 
+% which was extracted from the `organise_pairs.py` script.
 
-FS = 5000; % This is the sampling frequency of the input files
-windowLengthSec = 0.04; % Longer windows = better f res but worse t res
+% Same wavToSpec() options as baseline
+FS = 5000;
+windowLengthSec = 0.04;
 windowLengthSeg = windowLengthSec * FS;
 windowLengthSegRounded = 2^nextpow2(windowLengthSeg);
 
 % Define processing options
 processingOptions.resampleWav = false;
-processingOptions.resamplingRate = 4000;
 processingOptions.normaliseWav = true;
 
 % Define spectrogram settings
@@ -26,33 +25,41 @@ spectrogramOptions.resize = true;
 
 % Define file paths and export options
 exportOptions.plotSpec = false;
-exportOptions.exportSpecPng = false; % Slows down program 100x if set
+exportOptions.exportSpecPng = true;
 exportOptions.exportWithAxes = false;
-exportOptions.exportSpecPngPath = "spec_imgs";
+exportOptions.exportSpecPngPath = "specs_ships_multiple_recordings";
 exportOptions.exportSpecCsv = false;
-exportOptions.exportSpecCsvPath = "spec_csvs";
-exportOptions.exportSpecMat = true;
-exportOptions.exportSpecMatPath = "spec_mats";
+exportOptions.exportSpecMat = false;
 
 % Point to the root directory of DeepShip dataset on your machine
 rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/thesis-ml/raw_datasets/deepship/DeepShip_5k_seg_3s');
 
 VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
+% Read in csv
+csvFile = 'ships_with_multiple_recordings.csv';
+multipleRecordingsCsv = readcell(csvFile, "NumHeaderLines", 1);
+vesselsWithMultipleRecordings = multipleRecordingsCsv(:, 1);
+
 close all;
 
 for i = 1:length(VESSEL_CLASSES)
     vesselClass = VESSEL_CLASSES{i};
     classDir = dir(fullfile(rootDir, vesselClass, '*.wav'));
-    
-    parfor j = 1:length(classDir)
+
+    for j = 1:1000%length(classDir)
         currentFile = classDir(j).name;
+
+        fileNameParts = split(currentFile, '-');
+        vesselName = fileNameParts{1};
+        
+        if ~ismember(vesselName, vesselsWithMultipleRecordings)
+            continue;
+        end
+
         currentFilePath = fullfile(rootDir, vesselClass, currentFile);
 
-        [~, P, ~, ~] = wavToSpec(vesselClass, currentFilePath, ...
+        wavToSpec(vesselClass, currentFilePath, ...
             processingOptions, spectrogramOptions, exportOptions);
-
-        % disp('Shape of P:');
-        % disp(size(P)); % (freq bins, time bins)
     end
 end

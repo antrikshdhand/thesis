@@ -10,20 +10,45 @@ def check_gpu_use():
     print('GPU DETECTED \u2713')
     print(tf.config.list_physical_devices('GPU'))
 
-
 def calculate_metrics(evals: list):
     mean = np.mean(evals, axis=0)
     return mean[0], mean[1] # loss, acc
 
-def get_loss_curve(history: keras.callbacks.History):
-    loss = history.history['loss']
-    epochs = np.arange(1, len(loss) + 1, dtype=int)
+def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
+    """
+    Plots the training history for specified metrics over epochs.
+    
+    :param history: Keras History object from model.fit()
+    :param metrics: List of metric names to plot (e.g., ['loss', 'psnr'])
+    :return: matplotlib figure containing the plots
+    """
+    epochs = np.arange(1, len(history.history[metrics[0]]) + 1, dtype=int)
+    num_metrics = len(metrics)
 
-    fig, ax = plt.subplots()
+    if num_metrics == 1:
+        metric_data = history.history[metrics[0]]
 
-    ax.plot(epochs, loss, 'bo-')
-    ax.xaxis.get_major_locator().set_params(integer=True)
-    ax.set_title('Loss over epochs')
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(epochs, metric_data, 'bo-')
+        ax.xaxis.get_major_locator().set_params(integer=True)
+        ax.set_title(f'{metrics[0]} over epochs')
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel(metrics[0])
+        ax.grid(True)
+
+    else:
+        fig, axes = plt.subplots(num_metrics, 1, figsize=(8, 10), sharex=True)
+
+        for i, metric in enumerate(metrics):
+            metric_data = history.history[metric]
+            axes[i].plot(epochs, metric_data, 'bo-')
+            axes[i].xaxis.get_major_locator().set_params(integer=True)
+            axes[i].set_title(f'{metric} over epochs')
+            axes[i].set_xlabel('Epochs')
+            axes[i].set_ylabel(metric)
+            axes[i].grid(True)
+
+        fig.tight_layout()
 
     return fig
 
@@ -56,16 +81,17 @@ def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overl
     mean_loss = np.nanmean(np.where(losses == None, np.nan, losses), axis=0)
     mean_val_loss = np.nanmean(np.where(val_losses == None, np.nan, val_losses), axis=0)
 
+    ALPHA = 0.15
     if overlay:
         fig, ax = plt.subplots(nrows=1, ncols=2, sharex=True, figsize=(14, 5))
 
         # Plot each fold
         for fold_i in range(N_FOLDS):
             fold_epochs = np.arange(1, len(histories[fold_i].history['acc']) + 1, dtype=int)
-            ax[0].plot(fold_epochs, accuracies[fold_i][:len(fold_epochs)], 'o--b', alpha=0.3)
-            ax[0].plot(fold_epochs, val_accuracies[fold_i][:len(fold_epochs)], 'o--', color='orange', alpha=0.3)
-            ax[1].plot(fold_epochs, losses[fold_i][:len(fold_epochs)], 'o--b', alpha=0.3)
-            ax[1].plot(fold_epochs, val_losses[fold_i][:len(fold_epochs)], 'o--', color='orange', alpha=0.3)
+            ax[0].plot(fold_epochs, accuracies[fold_i][:len(fold_epochs)], 'o--b', alpha=ALPHA)
+            ax[0].plot(fold_epochs, val_accuracies[fold_i][:len(fold_epochs)], 'o--', color='orange', alpha=ALPHA)
+            ax[1].plot(fold_epochs, losses[fold_i][:len(fold_epochs)], 'o--b', alpha=ALPHA)
+            ax[1].plot(fold_epochs, val_losses[fold_i][:len(fold_epochs)], 'o--', color='orange', alpha=ALPHA)
         
         # Plot mean
         ax[0].plot(epochs, mean_accuracy, 'D-b', markersize=7, label='Training')
@@ -162,6 +188,7 @@ def get_acc_loss_curves_by_fold(histories: list[keras.callbacks.History], overla
     epoch_losses = np.array(epoch_losses, dtype=object)
     epoch_val_losses = np.array(epoch_val_losses, dtype=object)
 
+    ALPHA = 0.15
     if overlay:
         if max_epochs == 1:
             print("WARNING: plot is identical regardless of overlay setting for epochs=1")
@@ -170,11 +197,11 @@ def get_acc_loss_curves_by_fold(histories: list[keras.callbacks.History], overla
 
         # Plot each epoch
         for epoch_i in range(max_epochs):
-            ax[0].plot(folds, epoch_accuracies[epoch_i], 'o--b', alpha=0.3, label=f'Epoch {epoch_i + 1}')
-            ax[0].plot(folds, epoch_val_accuracies[epoch_i], 'o--', color='orange', alpha=0.3)
+            ax[0].plot(folds, epoch_accuracies[epoch_i], 'o--b', alpha=ALPHA)
+            ax[0].plot(folds, epoch_val_accuracies[epoch_i], 'o--', color='orange', alpha=ALPHA)
 
-            ax[1].plot(folds, epoch_losses[epoch_i], 'o--b', alpha=0.3)
-            ax[1].plot(folds, epoch_val_losses[epoch_i], 'o--', color='orange', alpha=0.3)
+            ax[1].plot(folds, epoch_losses[epoch_i], 'o--b', alpha=ALPHA)
+            ax[1].plot(folds, epoch_val_losses[epoch_i], 'o--', color='orange', alpha=ALPHA)
 
         # Plot mean across epochs for each fold
         mean_accuracy_per_fold = np.nanmean(epoch_accuracies, axis=0)
