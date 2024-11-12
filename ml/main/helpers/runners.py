@@ -4,37 +4,44 @@ import tensorflow as tf
 import keras
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import gc
-from typing import Literal
+from typing import Literal, List, Dict, Any, Optional, Tuple
 
 from helpers import data
 from helpers.data import DeepShipGenerator
 
 def k_fold_cross_validation(
-        fold_dfs: list[pd.DataFrame], model: keras.Model, fit_kwargs: dict, 
-        eval_kwargs: dict, ext: Literal['csv', 'npz', 'mat'], mat_var_name=None,
-        data_batch_size=32, use_cpu=False):
+    fold_dfs: List[pd.DataFrame],
+    model: keras.Model,
+    fit_kwargs: Dict[str, Any],
+    eval_kwargs: Dict[str, Any],
+    ext: Literal['csv', 'npz', 'mat'],
+    mat_var_name: Optional[str] = None,
+    data_batch_size: int = 32,
+    use_cpu: bool = False
+) -> Tuple[keras.Model, List[keras.callbacks.History], List[float], Dict[str, float]]:
     """
-    :param list[pd.DataFrame] fold_dfs: A list of DataFrames, each representing 
+    :param List[pd.DataFrame] fold_dfs: A list of DataFrames, each representing 
         one fold.
     :param keras.Model model: A compiled `keras.Model` object.
-    :param dict fit_kwargs: The remaining keyword arguments to be fed into 
+    :param Dict[str, Any] fit_kwargs: Additional keyword arguments to be fed into 
         `model.fit()`.
-    :param dict eval_kwargs: Same as `fit_kwargs` but for `model.evaluate()`.
-    :param str ext: The file extension of the spectrogram data (.csv, .npz, .mat)
-    :param str mat_var_name: The variable name within the `.mat` files to load 
-        if `ext` is 'mat'.
+    :param Dict[str, Any] eval_kwargs: Additional keyword arguments to be fed into 
+        `model.evaluate()`
+    :param Literal['csv', 'npz', 'mat] ext: The file extension of the 
+        spectrogram data (.csv, .npz, .mat)
+    :param Optional[str] mat_var_name: The variable name within the `.mat` files 
+        to load if `ext` is 'mat'.
     :param int data_batch_size: Batch size to use with data generators.
     :param bool use_cpu: Toggles training to be run on the CPU instead of GPU.
-    :return: Tuple containing trained model, list of histories, evaluation 
-        scores, and metrics dictionary.
+    :return: A tuple containing the trained model, a list of 
+        training histories (one for each fold), evaluation scores 
+        (list of loss/metrics for each fold), and a dictionary with averaged
+        precision, recall, F1 score, and accuracy across all folds.
     """ 
     histories = []
     evals = []
     
-    precisions = []
-    recalls = []
-    f1_scores = []
-    accuracies = []
+    precisions, recalls, f1_scores, accuracies = [], [], [], []
 
     NUM_FOLDS = len(fold_dfs)
     for k in range(NUM_FOLDS):
@@ -43,11 +50,8 @@ def k_fold_cross_validation(
         gc.collect()
         keras.backend.clear_session()
 
-        # Load data for current fold
-        if k == NUM_FOLDS - 1:
-            val_idx = 0
-        else:
-            val_idx = k + 1
+        # Set validation fold
+        val_idx = 0 if k == NUM_FOLDS - 1 else k + 1
 
         train_df, val_df, test_df = data.generate_kth_fold(
             fold_dfs, 
@@ -98,31 +102,21 @@ def k_fold_cross_validation(
             y_true.extend(np.argmax(batch_y, axis=1))
 
         # Calculate precision, recall, and F1 score for the current fold
-        precision = precision_score(y_true, y_pred, average='weighted')
-        recall = recall_score(y_true, y_pred, average='weighted')
-        f1 = f1_score(y_true, y_pred, average='weighted')
-        accuracy = accuracy_score(y_true, y_pred)
-
-        precisions.append(precision)
-        recalls.append(recall)
-        f1_scores.append(f1)
-        accuracies.append(accuracy)
+        precisions.append(precision_score(y_true, y_pred, average='weighted'))
+        recalls.append(recall_score(y_true, y_pred, average='weighted'))
+        f1_scores.append(f1_score(y_true, y_pred, average='weighted'))
+        accuracies.append(accuracy_score(y_true, y_pred))
 
         # ---- Clean up ---- #
         del train_df, test_df, train_gen, val_gen, test_gen
         gc.collect()
 
-    # Calculate average precision, recall, and F1 score across all folds
-    avg_precision = np.mean(precisions)
-    avg_recall = np.mean(recalls)
-    avg_f1_score = np.mean(f1_scores)
-    avg_accuracy = np.mean(accuracies)
-
+    # Calculate average metrics across all folds
     metrics = {
-        "precision": avg_precision,
-        "recall": avg_recall,
-        "f1_score": avg_f1_score,
-        "accuracy": avg_accuracy
+        "precision": np.mean(precisions),
+        "recall": np.mean(recalls),
+        "f1_score": np.mean(f1_scores),
+        "accuracy": np.mean(accuracies)
     }
-    
+
     return model, histories, evals, metrics

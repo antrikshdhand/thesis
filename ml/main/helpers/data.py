@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import keras
 import scipy.io
-from typing import Literal
+from typing import Literal, Optional, List
 
 def rename_folds(fold_definitions: pd.DataFrame, new_path_to_root: str, 
                   unix: bool, ext: Literal['csv', 'npz', 'mat'],
@@ -123,7 +123,7 @@ def import_spectrogram(df: pd.DataFrame, ext: Literal['csv', 'npz', 'mat'],
                        mat_var_name=None, source_col: str = 'files',
                        dest_col: str = 'spectrogram'):
     """
-    Loads spectrogram data from `source_col` column of a single fold DataFrame and 
+    Loads spectrogram data from `source_col` column of a DataFrame and 
     attaches it as a new column `dest_col`. The function supports loading 
     data from `.npz`, `.csv`, and `.mat` file formats.
 
@@ -166,16 +166,15 @@ def import_spectrograms(fold_dfs: list[pd.DataFrame],
                         ext: Literal['csv', 'npz', 'mat'], mat_var_name=None,
                         source_col: str = 'files', dest_col: str = 'spectrogram'):
     """
-    Loads spectrogram data from `source_col` column of each fold in `fold_dfs` 
-    and attaches it as a new column `dest_col`. Supports loading from `.npz`, 
+    Imports spectrograms for each fold in `fold_dfs`. Supports loading from `.npz`, 
     `.csv`, and `.mat` file formats.
 
     :param list[pd.DataFrame] fold_dfs: A list of DataFrames, each representing 
         a fold to be used in cross-validation. Each DataFrame should contain a 
-        column `files` with file paths to the spectrogram data.
+        column `source_col` with file paths to the spectrogram data.
     :param str ext: The file extension of the spectrogram data ('csv', 'npz', or 'mat').
-    :param str mat_var_name: The variable name within the `.mat` files to load 
-        if `ext` is 'mat'. This is required when loading MATLAB `.mat` files.
+    :param str mat_var_name: The variable name within the `.mat` files to load.
+        This is required when loading MATLAB files.
     :param str source_col: The name of the column containing the file paths.
     :param str dest_col: The name of the column to store the spectrograms.
     :return list[pd.DataFrame]: The updated list of DataFrames, each containing 
@@ -183,7 +182,7 @@ def import_spectrograms(fold_dfs: list[pd.DataFrame],
     """
 
     for i, fold_df in enumerate(fold_dfs):
-        fold_dfs[i] = import_spectrogram(fold_df, ext, mat_var_name)
+        fold_dfs[i] = import_spectrogram(fold_df, ext, mat_var_name, source_col, dest_col)
     return fold_dfs
 
 
@@ -191,7 +190,7 @@ def generate_kth_fold(fold_dfs: list[pd.DataFrame], test_idx: int, val_idx=None)
     """
     From a list of k dataframes (representing k folds), this function will set 
     aside one fold (index `test_idx`) to be used for testing, another fold 
-    (index `val_idx`, if provided) to be used for validation, and concatenate 
+    (index `val_idx`) to be used for validation (optional), and concatenate 
     all remaining folds to be used for training.
 
     :param fold_dfs: List of DataFrames, each representing a fold.
@@ -216,15 +215,10 @@ def generate_kth_fold(fold_dfs: list[pd.DataFrame], test_idx: int, val_idx=None)
     if val_idx is not None:
         val_df = fold_dfs[val_idx]
         # Train DataFrames are all remaining folds excluding the test and validation folds
-        train_dfs = [
-            fold_dfs[i] for i in range(len(fold_dfs)) 
-            if i != test_idx and i != val_idx
-        ]
+        train_dfs = [fold_dfs[i] for i in range(len(fold_dfs)) if i != test_idx and i != val_idx]
     else:
         # Train DataFrames are all remaining folds excluding the test fold
-        train_dfs = [
-            fold_dfs[i] for i in range(len(fold_dfs)) if i != test_idx
-        ]
+        train_dfs = [fold_dfs[i] for i in range(len(fold_dfs)) if i != test_idx]
 
     train_df = pd.concat(train_dfs, ignore_index=True)
 
@@ -235,23 +229,38 @@ def generate_kth_fold(fold_dfs: list[pd.DataFrame], test_idx: int, val_idx=None)
 
 
 class DeepShipGenerator(keras.utils.Sequence):
+    """
+    Generator for DeepShip dataset, used for either classification or 
+    autoencoder-based tasks.
+    
+    - For classification tasks, it provides (X, y) pairs where X is a spectrogram 
+        and y is a class label.
+    - For autoencoder denoising tasks, it provides (X, X) pairs, treating the 
+        same spectrogram X as both input and output.
+    """
 
-    def __init__(self, df, ext, mat_var_name=None,
-                 classes=['Cargo', 'Passengership', 'Tanker', 'Tug'],
-                 batch_size=32, shuffle=True,
-                 conv_channel=True, X_only=False):
+    def __init__(self, 
+                 df: pd.DataFrame, 
+                 ext: Literal['csv', 'npz', 'mat'], 
+                 mat_var_name: Optional[str] = None, 
+                 classes: List[str] = ['Cargo', 'Passengership', 'Tanker', 'Tug'],
+                 batch_size: int = 32, 
+                 shuffle: bool = True, 
+                 conv_channel: bool = True, 
+                 X_only: bool = False):
         """
-        Generator for loading spectrogram data in batches.
-        
+        Initialise the generator.
+
         :param df: DataFrame containing file paths and labels.
-        :param ext: File extension (csv, npz, mat) for spectrogram files.
+        :param ext: File extension for spectrogram files ('mat', 'csv', or 'npz').
         :param mat_var_name: Variable name in .mat files if applicable.
-        :param classes: List of class labels (for one-hot encoding).
+        :param classes: List of class labels for one-hot encoding (for classification tasks).
         :param batch_size: Size of each batch.
-        :param shuffle: Whether to shuffle the data at the end of each epoch.
+        :param shuffle: Whether to shuffle data at the end of each epoch.
         :param conv_channel: Whether to add a channel dimension for CNN input.
-        :param X_only: Whether to output tuples of (X, X), useful for autoencoders.
+        :param X_only: If True, outputs (X, X) for autoencoder tasks; otherwise, (X, y).
         """
+
         self.df = df
         self.ext = ext
         self.mat_var_name = mat_var_name
@@ -269,13 +278,13 @@ class DeepShipGenerator(keras.utils.Sequence):
 
     def __len__(self):
         """
-        Number of batches per epoch.
+        Returns the number of batches per epoch.
         """
         return self.n // self.batch_size
 
     def __get_x(self, batch_df):
         """
-        Load spectrograms for the batch.
+        Load and preprocess the spectrograms for the batch.
         """
         # Import spectrograms for each file in the batch
         batch_df = import_spectrogram(batch_df, self.ext, self.mat_var_name,
@@ -290,7 +299,7 @@ class DeepShipGenerator(keras.utils.Sequence):
 
     def __get_y(self, batch_df):
         """
-        Get one-hot encoded labels for the batch.
+        Get one-hot encoded labels for the batch (for classification tasks).
         """
         return batch_df[self.classes].to_numpy(copy=True)
 
@@ -311,17 +320,36 @@ class DeepShipGenerator(keras.utils.Sequence):
 
     def on_epoch_end(self):
         """
-        Shuffle the data at the end of each epoch.
+        Shuffle the data at the end of each epoch if specified.
         """
         if self.shuffle:
             self.df = self.df.sample(frac=1).reset_index(drop=True)
 
 
 class N2NGenerator(keras.utils.Sequence):
+    """
+    Noise2Noise generator for denoising tasks where input (X) and output (y) spectrograms 
+    are different but come from similar recordings. Suitable for tasks where we want the model 
+    to learn to denoise or uncover important features by observing slightly varied spectrograms.
+    """
 
-    def __init__(self, df, ext, mat_var_name=None, batch_size=32, shuffle=True,
-                 conv_channel=True):
+    def __init__(self, 
+                 df: pd.DataFrame, 
+                 ext: Literal['csv', 'npz', 'mat'], 
+                 mat_var_name: Optional[str] = None, 
+                 batch_size: int = 32, 
+                 shuffle: bool = True, 
+                 conv_channel: bool = True):    
+        """
+        Initialise the generator.
 
+        :param df: DataFrame containing file paths for pairs of noisy spectrograms.
+        :param ext: File extension for spectrogram files ('mat', 'csv', or 'npz').
+        :param mat_var_name: Variable name in .mat files if applicable.
+        :param batch_size: Size of each batch.
+        :param shuffle: Whether to shuffle data at the end of each epoch.
+        :param conv_channel: Whether to add a channel dimension for CNN input.
+        """
         self.df = df 
         self.ext = ext
         self.mat_var_name = mat_var_name
@@ -336,13 +364,14 @@ class N2NGenerator(keras.utils.Sequence):
 
     def __len__(self):
         """
-        Number of batches per epoch.
+        Returns the number of batches per epoch.
         """
         return self.n // self.batch_size
 
     def __get_data(self, batch_df):
         """
-        Load both X and y spectrograms for the batch.
+        Load and preprocess both X and y spectrograms for the batch. 
+        X and y are different spectrograms from the same vessel, used for denoising.
         """
 
         # First convert X spectrogram

@@ -5,6 +5,9 @@ data/deepship_baseline_mat
 data/deepship_baseline_detrended_mat
 data/deepship_baseline_unnorm_mat
 
+# Any saved keras models (due to GitHub size restrictions)
+*.keras
+
 # TAKEN FROM GITHUB RECOMMENDED PYTHON GITIGNORE
 
 # Byte-compiled / optimized / DLL files
