@@ -21,9 +21,9 @@ for i = 1:length(masksDir)
     maskFile = fullfile(masksPath, masksDir(i).name);
     [~, maskFileName, ~] = fileparts(maskFile);
     parts = split(maskFileName, '_');
-    index = str2double(parts{2});
+    index = parts{2};
 
-    specFile = fullfile(specsPath, specsDir(index).name);
+    specFile = fullfile(specsPath, specsDir(str2double(index)).name);
     [~, specFileName, ~] = fileparts(specFile);
 
     disp(['Spec: ', specFileName]);

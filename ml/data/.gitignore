@@ -4,7 +4,11 @@ deepship_baseline_detrended_mat
 deepship_baseline_unnorm_mat
 
 # Image segmentation
+
+# Matlab project 
 image_segmentation/narrowband_seg
+image_segmentation/data/gTruth.mat
+
 image_segmentation/data/spectrograms
 image_segmentation/data/PixelLabelData
 image_segmentation/data/masks
