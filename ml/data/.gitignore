@@ -11,7 +11,6 @@ image_segmentation/data/gTruth.mat
 
 image_segmentation/data/spectrograms
 image_segmentation/data/PixelLabelData
-image_segmentation/data/masks
 
 
 
