@@ -1,4 +1,5 @@
 .vscode
+*.asv
 
 # Any saved keras models (due to GitHub size restrictions)
 *.keras
