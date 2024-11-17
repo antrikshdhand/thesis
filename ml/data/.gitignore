@@ -2,6 +2,8 @@
 deepship_baseline_mat
 deepship_baseline_detrended_mat
 deepship_baseline_unnorm_mat
+deepship_baseline_channel_normalised
+deepship_baseline_global_normalised
 
 # Image segmentation
 

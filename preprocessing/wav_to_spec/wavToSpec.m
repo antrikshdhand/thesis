@@ -20,6 +20,7 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
 %       * window - (integer) Window size for spectrogram calculation
 %       * noverlap - (integer) Overlap length for spectrogram
 %       * nfft - (integer) FFT length
+%       * amplitudeCutoff - (logical) Flag to apply low-amplitude cutoff
 %       * lowFreqCutoff - (logical) Flag to apply low-frequency cutoff
 %       * startHz - (integer) Frequency threshold for low-frequency cutoff
 %       * highFreqCutoff - (logical) Flag to apply high-frequency cutoff
@@ -66,10 +67,13 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
     ampls = abs(S);
 
     P = 10 * log10(ampls.^2 + 1e-8); % dB scale
-
-    low_threshold = -30;
-    P(P < low_threshold) = low_threshold;
-
+    
+    if spectrogramOptions.amplitudeCutoff
+        low_threshold = -30;
+        ampls(ampls < low_threshold) = low_threshold;
+        P(P < low_threshold) = low_threshold;
+    end
+    
     % disp(['Max amplitude before cutoffs: ', num2str(max(ampls(:)))]);
     % disp(['Min amplitude before cutoffs: ', num2str(min(ampls(:)))]);
     %disp(max(P(:))); 
