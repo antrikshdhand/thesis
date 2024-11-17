@@ -20,22 +20,22 @@ spectrogramOptions.nfft = 1024;
 spectrogramOptions.lowFreqCutoff = true;
 spectrogramOptions.startHz = 50; % Change this empirically
 spectrogramOptions.highFreqCutoff = true;
-spectrogramOptions.stopHz = 1000; % Change this based on your needs
-spectrogramOptions.normaliseSpec = false;
+spectrogramOptions.stopHz = 1000; % Change this based on Nyquist-Shannon theorem
 spectrogramOptions.resize = true;
 
 % Define file paths and export options
-exportOptions.plotSpec = false;
-exportOptions.exportSpecPng = false; % Slows down program 100x if set
-exportOptions.exportWithAxes = false;
+exportOptions.plotSpec = true;
+exportOptions.exportSpecPng = true; % Slows down program 100x if set
+exportOptions.exportWithAxes = true;
 exportOptions.exportSpecPngPath = "spec_imgs";
-exportOptions.exportSpecCsv = false;
+exportOptions.exportSpecCsv = true;
 exportOptions.exportSpecCsvPath = "spec_csvs";
 exportOptions.exportSpecMat = true;
 exportOptions.exportSpecMatPath = "spec_mats";
 
 % Point to the root directory of DeepShip dataset on your machine
-rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/thesis-ml/raw_datasets/deepship/DeepShip_5k_seg_3s');
+% rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/thesis-ml/raw_datasets/deepship/DeepShip_5k_seg_3s'); 
+rootDir = fullfile("../../raw_datasets/DeepShip_5k_seg_3s/");
 
 VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
@@ -44,8 +44,8 @@ close all;
 for i = 1:length(VESSEL_CLASSES)
     vesselClass = VESSEL_CLASSES{i};
     classDir = dir(fullfile(rootDir, vesselClass, '*.wav'));
-    
-    parfor j = 1:length(classDir)
+
+    for j = 1:5%length(classDir)
         currentFile = classDir(j).name;
         currentFilePath = fullfile(rootDir, vesselClass, currentFile);
 

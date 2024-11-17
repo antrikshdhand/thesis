@@ -5,8 +5,8 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
 %   wavToSpec
 %
 % DESCRIPTION:
-%   Processes a WAV file to generate a spectrogram, applying resampling, 
-%   normalisation, and optional frequency cutoffs. Exports the spectrogram 
+%   Processes a WAV file to generate a spectrogram, applying resampling 
+%   and optional frequency cutoffs. Exports the spectrogram 
 %   as a PNG image and/or CSV file based on provided options.
 %
 % INPUT:
@@ -24,8 +24,6 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
 %       * startHz - (integer) Frequency threshold for low-frequency cutoff
 %       * highFreqCutoff - (logical) Flag to apply high-frequency cutoff
 %       * stopHz - (double) Frequency threshold for high-frequency cutoff
-%       * normaliseSpec - (logical) Flag to apply 0-1 normalisation to the
-%           spectrogram
 %       * resize - (logical) Flag to resize spectrogram before export
 %   exportOptions - (struct) Settings for export, including:
 %       * exportSpecPng - (logical) Enable PNG export of the spectrogram
@@ -47,6 +45,7 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
 % REVISION HISTORY:
 %   2024/11/07 - Initial commit to GitHub.
 %   2024/11/08 - Removed `verbose` and `vesselClasses` function parameters
+%   2024/11/17 - Removed normalisation option
 
     validateInputs(exportOptions);
 
@@ -98,12 +97,6 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
     % disp(['Max amplitude after cutoffs: ', num2str(max(ampls(:)))]);
     % disp(['Min amplitude after cutoffs: ', num2str(min(ampls(:)))]);
 
-    % 0-1 normalisation of the spectrograms
-    if spectrogramOptions.normaliseSpec
-        ampls = (ampls - min(ampls(:))) / (max(ampls(:)) - min(ampls(:)));
-        P = (P - min(P(:))) / (max(P(:)) - min(P(:)));
-    end
-
     % Resize spectrogram if enabled
     if spectrogramOptions.resize
         P = imresize(P, [192 192]);
@@ -126,12 +119,13 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
         end
 
         pngDir = fullfile(exportOptions.exportSpecPngPath, vesselClass);
-        if exportOptions.exportSpecPng && ~isfolder(pngDir)
+        if ~isfolder(pngDir)
             mkdir(pngDir);
         end
         
-        pngName = fullfile(vesselClass, [name, '.png']); % e.g. "Cargo/ADVENTURE_1-70-20171207_seg001.png"
-        exportgraphics(spec, fullfile(exportOptions.exportSpecPngPath, pngName));
+        pngName = strcat(name, '.png'); % e.g. "ADVENTURE_1-70-20171207_seg001.png"
+        fullfile(exportOptions.exportSpecPngPath, vesselClass, pngName);
+        exportgraphics(spec, fullfile(exportOptions.exportSpecPngPath, vesselClass, pngName));
     end
     
     % Export CSV if enabled
@@ -139,12 +133,12 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
         [~, name, ~] = fileparts(currentFilePath); 
 
         csvDir = fullfile(exportOptions.exportSpecCsvPath, vesselClass);
-        if exportOptions.exportSpecCsv && ~isfolder(csvDir)
+        if ~isfolder(csvDir)
             mkdir(csvDir);
         end
 
-        csvName = fullfile(vesselClass, [name, '.csv']);
-        writematrix(P', fullfile(exportOptions.exportSpecCsvPath, csvName));
+        csvName = strcat(name, '.csv');
+        writematrix(P', fullfile(exportOptions.exportSpecCsvPath, vesselClass, csvName));
     end
 
     % Export as MAT if enabled
@@ -152,13 +146,13 @@ function [ampls, P, f, t] = wavToSpec(vesselClass, currentFilePath, ...
         [~, name, ~] = fileparts(currentFilePath); 
 
         matDir = fullfile(exportOptions.exportSpecMatPath, vesselClass);
-        if exportOptions.exportSpecMat && ~isfolder(matDir)
+        if ~isfolder(matDir)
             mkdir(matDir);
         end
 
-        matName = fullfile(vesselClass, [name, '.mat']);
+        matName = strcat(name, '.mat');
         Ptrans = P';
-        save(fullfile(exportOptions.exportSpecMatPath, matName), 'Ptrans');
+        save(fullfile(exportOptions.exportSpecMatPath, vesselClass, matName), 'Ptrans');
     end
 
     function validateInputs(exportOptions)    
