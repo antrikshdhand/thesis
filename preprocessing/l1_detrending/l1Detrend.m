@@ -76,20 +76,18 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
                 ampls_detrended_ls{j}(:, i) = t_i - t_i_detrended;
             end
         end
-    
-    % % Take the absolute value to prevent complex values
-    % for i = 1:length(alphas)
-    %     ampls_detrended_ls{i} = abs(ampls_detrended_ls{i});
-    % end
+
+    outerposition = [0 0 0.8 0.8];
 
     % Plot comparison spectrogram if specified
     if plottingOptions.plotSpec
-        figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+        fig = figure('units', 'normalized', 'outerposition', outerposition);
         sgtitle( ...
-            sprintf('%s (%s) - l1 detrend at various alpha', ...
+            sprintf(['l1 detrended spectrograms at various alpha values\n' ...
+            '%s (%s)'], ...
             names.fileName, names.className), ...
             'Interpreter', 'None', ...
-            'FontSize', 16, ...
+            'FontSize', 14, ...
             'FontWeight', 'bold');
         
         numPlotRows = ceil((length(alphas) + 1) / 2);
@@ -108,8 +106,9 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             colormap('hot');
             colorbar;
             title(sprintf('alpha=%g', alphas(i)));
-            clim([min(ampls(:)) max(ampls(:))]);
+            %clim([min(ampls(:)) max(ampls(:))]);
         end
+        exportgraphics(fig, "examples/spec_comparison.pdf")
     end
 
     random_time_seg = randi([1, num_time_bins]);
@@ -122,12 +121,12 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         numRows = ceil(numPlots / numCols);
 
         % Plot original and l1 trends at different alphas
-        figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+        fig = figure('units', 'normalized', 'outerposition', outerposition);
         sgtitle( ...
             sprintf("A random time segment (segment %i) overlaid with its " + ...
             "l1 trend at various alpha values\n%s (%s)", ...
             random_time_seg, names.fileName, names.className), ...
-            'FontSize', 16, ...
+            'FontSize', 14, ...
             'Interpreter', 'None', ...
             'FontWeight', 'bold' ...
         );
@@ -153,6 +152,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             ylabel('Amplitude');
             hold off;
         end
+        exportgraphics(fig, "examples/segment_l1_trend.pdf")
     end
 
     % Plot one random time segment overlaid with its detrended versions at 
@@ -162,12 +162,12 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         numCols = 2;
         numRows = ceil(numPlots / numCols);
 
-        figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+        fig = figure('units', 'normalized', 'outerposition', outerposition);
         sgtitle( ...
             sprintf("Random time segment %i overlaid with detrended versions " + ...
             "at various alpha values\n%s (%s)", ...
             random_time_seg, names.fileName, names.className), ...
-            'FontSize', 16, ...
+            'FontSize', 14, ...
             'FontWeight', 'bold', ...
             'Interpreter', 'None' ...
         );
@@ -188,6 +188,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             ylabel('Amplitude');
             hold off;
         end
+        exportgraphics(fig, "examples/segment_detrended.pdf")
     end
 
     % Plot 3D surfaces for original and detrended spectrograms at all alpha values
@@ -196,10 +197,10 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         numCols = 2;
         numRows = ceil(numPlots / numCols);
 
-        figure('units', 'normalized', 'outerposition', [0 0 1 1]);
+        fig = figure('units', 'normalized', 'outerposition', outerposition);
         sgtitle(sprintf('3D surfaces of original and detrended spectrograms\n%s (%s)', ...
             names.fileName, names.className), ...
-            'FontSize', 16, ...
+            'FontSize', 14, ...
             'FontWeight', 'bold', ...
             'Interpreter', 'None' ...
         );
@@ -221,6 +222,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             zlabel('Amplitude');
             title(sprintf('Detrended 3D surface (alpha=%g)', alphas(i)));
         end
+        exportgraphics(fig, "examples/3d_surface.pdf")
     end
 
     % Resize spectrogram if specified

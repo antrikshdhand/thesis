@@ -2,6 +2,8 @@
 % multiple recordings, as defined in `ships_with_multiple_recordings.csv` 
 % which was extracted from the `organise_pairs.py` script.
 
+addpath("../../../../preprocessing/wav_to_spec");
+
 % Same wavToSpec() options as baseline
 FS = 5000;
 windowLengthSec = 0.04;
@@ -47,7 +49,7 @@ for i = 1:length(VESSEL_CLASSES)
     vesselClass = VESSEL_CLASSES{i};
     classDir = dir(fullfile(rootDir, vesselClass, '*.wav'));
 
-    for j = 1:1000%length(classDir)
+    parfor j = 1:1000%length(classDir)
         currentFile = classDir(j).name;
 
         fileNameParts = split(currentFile, '-');

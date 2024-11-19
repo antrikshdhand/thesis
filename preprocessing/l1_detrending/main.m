@@ -25,7 +25,6 @@ spectrogramOptions.lowFreqCutoff = true;
 spectrogramOptions.startHz = 50;
 spectrogramOptions.highFreqCutoff = true;
 spectrogramOptions.stopHz = 1000;
-spectrogramOptions.normaliseSpec = false;
 spectrogramOptions.resize = false;
 
 % Define file paths and export options
@@ -36,7 +35,7 @@ exportOptions.exportSpecMat = false;
 
 %%% Perform l1 detrending %%%
 
-rootDir = fullfile(getenv('USERPROFILE'), 'Desktop/thesis-ml/raw_datasets/deepship/DeepShip_5k_seg_3s');
+rootDir = fullfile("../../raw_datasets/DeepShip_5k_seg_3s/");
 VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
 close all;
