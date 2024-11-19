@@ -45,7 +45,7 @@ def k_fold_cross_validation(
 
     NUM_FOLDS = len(fold_dfs)
     for k in range(NUM_FOLDS):
-        print(f"FOLD {k + 1}")
+        print(f"FOLD {k + 1}/{len(fold_dfs)}")
 
         gc.collect()
         keras.backend.clear_session()

@@ -21,6 +21,7 @@ processingOptions.normaliseWav = true;
 spectrogramOptions.window = hann(windowLengthSegRounded);
 spectrogramOptions.noverlap = 0.75 * windowLengthSegRounded;
 spectrogramOptions.nfft = 1024;
+spectrogramOptions.amplitudeCutoff = true;
 spectrogramOptions.lowFreqCutoff = true;
 spectrogramOptions.startHz = 50;
 spectrogramOptions.highFreqCutoff = true;
@@ -40,11 +41,11 @@ VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
 close all;
 
-for i = 1:length(VESSEL_CLASSES)
+for i = 1:1%length(VESSEL_CLASSES)
     vesselClass = VESSEL_CLASSES{i};
     classDir = dir(fullfile(rootDir, vesselClass, '*.wav'));
     
-    parfor j = 1:length(classDir)
+    for j = 975%1:length(classDir)
         currentFile = classDir(j).name;
         currentFilePath = fullfile(rootDir, vesselClass, currentFile);
 
@@ -55,16 +56,16 @@ for i = 1:length(VESSEL_CLASSES)
 
         %%% l1Detrend options %%%
         l1PlottingOptions = struct();
-        l1PlottingOptions.plotSpec = false;
-        l1PlottingOptions.plotSegTrend = false;
-        l1PlottingOptions.plotSegDetrended = false;
-        l1PlottingOptions.plot3DSurface = false;
+        l1PlottingOptions.plotSpec = true;
+        l1PlottingOptions.plotSegTrend = true;
+        l1PlottingOptions.plotSegDetrended = true;
+        l1PlottingOptions.plot3DSurface = true;
 
         l1ExportOptions = struct();
         l1ExportOptions.resizeSpec = true;
         l1ExportOptions.exportSpecCsv = false;
         l1ExportOptions.exportSpecCsvPath = "detrended_specs_csv";
-        l1ExportOptions.exportSpecMat = true;
+        l1ExportOptions.exportSpecMat = false;
         l1ExportOptions.exportSpecMatPath = "detrended_specs_mat";
         
         names = struct();
