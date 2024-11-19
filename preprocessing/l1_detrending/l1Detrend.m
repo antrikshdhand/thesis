@@ -106,7 +106,7 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             colormap('hot');
             colorbar;
             title(sprintf('alpha=%g', alphas(i)));
-            clim([min(ampls(:)) max(ampls(:))]);
+            %clim([min(ampls(:)) max(ampls(:))]);
         end
         exportgraphics(fig, 'examples/spec_comparison.pdf')
     end
