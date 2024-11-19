@@ -77,7 +77,9 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             end
         end
     
-    outerposition = [0 0 0.5 0.6];
+    outerposition = [0 0 0.4 0.5];
+    bigFontSize = 14;
+    smallFontSize = 12;
 
     % Plot comparison spectrogram if specified
     if plottingOptions.plotSpec
@@ -93,19 +95,19 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         numPlotRows = ceil((length(alphas) + 1) / 2);
         subplot(numPlotRows, 2, 1);
         imagesc(f, t, ampls');
-        xlabel('Frequency (Hz)');
-        ylabel('Time');
+        xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+        ylabel('Time', 'FontSize', smallFontSize);
         colormap('hot');
         colorbar;
-        title('Original');
+        title('Original', 'FontSize', bigFontSize);
         for i = 1:length(alphas)
             subplot(numPlotRows, 2, i + 1);
             imagesc(f, t, ampls_detrended_ls{i}');
-            xlabel('Frequency (Hz)');
-            ylabel('Time');
+            xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+            ylabel('Time', 'FontSize', smallFontSize);
             colormap('hot');
             colorbar;
-            title(sprintf('alpha=%g', alphas(i)));
+            title(sprintf('alpha=%g', alphas(i)), 'FontSize', bigFontSize);
             %clim([min(ampls(:)) max(ampls(:))]);
         end
         exportgraphics(fig, 'examples/spec_comparison.pdf')
@@ -142,14 +144,14 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             if i > 1
                 plot(f, l1_trends_ls{i - 1}(:, random_time_seg), 'r-', ...
                     'LineWidth', 1.75);
-                title(sprintf('Original and alpha=%g', alphas(i - 1)));
+                title(sprintf('Original and alpha=%g', alphas(i - 1)), 'FontSize', bigFontSize);
             else
-                title('Original');
+                title('Original', 'FontSize', bigFontSize);
             end
     
             % Set plot labels and limits
-            xlabel('Frequency (Hz)');
-            ylabel('Amplitude');
+            xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+            ylabel('Amplitude', 'FontSize', smallFontSize);
             hold off;
         end
         exportgraphics(fig, 'examples/segment_l1_trend.pdf')
@@ -180,12 +182,12 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
             if i > 1
                 plot(f, ampls_detrended_ls{i - 1}(:, random_time_seg), ...
                     'r-', 'LineWidth', 1.75);
-                title(sprintf('Original and alpha=%g', alphas(i - 1)));
+                title(sprintf('Original and alpha=%g', alphas(i - 1)), 'FontSize', bigFontSize);
             else
-                title('Original');
+                title('Original', 'FontSize', bigFontSize);
             end
-            xlabel('Frequency (Hz)');
-            ylabel('Amplitude');
+            xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+            ylabel('Amplitude', 'FontSize', smallFontSize);
             hold off;
         end
         exportgraphics(fig, 'examples/segment_detrended.pdf')
@@ -208,19 +210,19 @@ function l1Detrend(f, t, ampls, alphas, names, plottingOptions, exportOptions)
         % Plot original spectrogram
         subplot(numRows, numCols, 1);
         surf(f, t, ampls');
-        xlabel('Frequency (Hz)');
-        ylabel('Time');
-        zlabel('Amplitude');
-        title('Original 3D Surface');
+        xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+        ylabel('Time', 'FontSize', smallFontSize);
+        zlabel('Amplitude', 'FontSize', smallFontSize);
+        title('Original 3D Surface', 'FontSize', bigFontSize);
 
         % Plot each detrended spectrogram for different alpha values
         for i = 1:length(alphas)
             subplot(numRows, numCols, i + 1);
             surf(f, t, ampls_detrended_ls{i}');
-            xlabel('Frequency (Hz)');
-            ylabel('Time');
-            zlabel('Amplitude');
-            title(sprintf('Detrended 3D surface (alpha=%g)', alphas(i)));
+            xlabel('Frequency (Hz)', 'FontSize', smallFontSize);
+            ylabel('Time', 'FontSize', smallFontSize);
+            zlabel('Amplitude', 'FontSize', smallFontSize);
+            title(sprintf('Detrended 3D surface (alpha=%g)', alphas(i)), 'FontSize', bigFontSize);
         end
         exportgraphics(fig, 'examples/3d_plot.pdf')
     end

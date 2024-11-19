@@ -4,7 +4,9 @@
 rootDir = fullfile("../../ml/data/deepship_baseline_unnorm_mat"); % Ptrans
 % globalDir = fullfile('../../ml/data/deepship_baseline_global_normalised');
 globalDir = fullfile('global_normalised/');
-channelDir = fullfile('../../ml/data/deepship_baseline_channel_normalised');
+% channelDir = fullfile('../../ml/data/deepship_baseline_channel_normalised');
+channelDir = fullfile('channel_normalised/');
+
 
 VESSEL_CLASSES = {'Cargo', 'Passengership', 'Tanker', 'Tug'};
 
@@ -34,8 +36,43 @@ for i = 1:1%length(VESSEL_CLASSES)
         channelData = load(channelPath);
         channelNormalisedSpectrogram = channelData.channelNormalised;
 
-        % Compute histograms for comparison
-        fig1 = figure('units', 'normalized', 'outerposition', [0 0 0.5 0.45]);
+        outerposition = [0 0 0.5 0.35];
+
+        %% Plot a random time segment
+        numTimeBins = size(originalSpectrogram, 2);
+        randomTimeIndex = randi([1, numTimeBins]);
+
+        originalSegment = originalSpectrogram(:, randomTimeIndex);
+        globalSegment = globalNormalisedSpectrogram(:, randomTimeIndex);
+        channelSegment = channelNormalisedSpectrogram(:, randomTimeIndex);
+
+        fig = figure('units', 'normalized', 'outerposition', outerposition);
+
+        subplot(1, 3, 1);
+        plot(originalSegment, 'LineWidth', 1.25, 'Color', [0.1 0.5 0.8]);
+        title('Original Segment', 'FontSize', 16, 'FontWeight', 'bold');
+        xlabel('Frequency Bins', 'FontSize', 13);
+        ylabel('Amplitude', 'FontSize', 13);
+        grid on;
+
+        subplot(1, 3, 2);
+        plot(globalSegment, 'LineWidth', 1.25, 'Color', [0.8 0.4 0.1]);
+        title('Global Normalised Segment', 'FontSize', 16, 'FontWeight', 'bold');
+        xlabel('Frequency Bins', 'FontSize', 13);
+        ylabel('Amplitude', 'FontSize', 13);
+        grid on;
+
+        subplot(1, 3, 3);
+        plot(channelSegment, 'LineWidth', 1.25, 'Color', [0.1 0.8 0.4]);
+        title('Channel Normalised Segment', 'FontSize', 16, 'FontWeight', 'bold');
+        xlabel('Frequency Bins', 'FontSize', 13);
+        ylabel('Amplitude', 'FontSize', 13);
+        grid on;
+
+        exportgraphics(fig, "examples/timeSegmentComparison.pdf");
+
+        %% Plot comparison histograms
+        fig1 = figure('units', 'normalized', 'outerposition', outerposition);
 
         subplot(1, 3, 1);
         histogram(originalSpectrogram(:), 50, 'FaceColor', [0.1 0.5 0.8]);
@@ -58,17 +95,17 @@ for i = 1:1%length(VESSEL_CLASSES)
         ylabel('Frequency', 'FontSize', 13);
         grid on;
 
-        % % sgtitle( ...
-        % %     sprintf('Amplitude Distributions - %s (%s)', currentFile, vesselClass), ...
-        % %     'FontSize', 14, ...
-        % %     'FontWeight', 'bold', ...
-        % %     'Interpreter', 'none' ...
-        % % );
-        % 
+        % sgtitle( ...
+        %     sprintf('Amplitude Distributions - %s (%s)', currentFile, vesselClass), ...
+        %     'FontSize', 14, ...
+        %     'FontWeight', 'bold', ...
+        %     'Interpreter', 'none' ...
+        % );
+
         exportgraphics(fig1, "examples/histogramComparison.pdf")
 
-        % Plot the original, global normalised, and channel normalised spectrograms
-        fig2 = figure('units', 'normalized', 'outerposition', [0 0 0.5 0.45]);
+        %% Plot comparison spectrograms
+        fig2 = figure('units', 'normalized', 'outerposition', outerposition);
 
         subplot(1, 3, 1);
         imagesc(originalSpectrogram);

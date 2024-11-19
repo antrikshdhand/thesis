@@ -91,10 +91,10 @@ for i = 1:length(VESSEL_CLASSES)
     xlim(x_limits);
     ylim(y_limits);
     
-    title(['Average Amplitude - ', vesselClass], ...
+    title(sprintf('%s', vesselClass), ...
         'FontSize', 14, 'FontWeight', 'bold');
-    xlabel('Amplitude (dB)', 'FontSize', 12);
-    ylabel('Frequency', 'FontSize', 12);
+    xlabel('Amplitude (dB)', 'FontSize', 11);
+    ylabel('Frequency', 'FontSize', 11);
 end
 
 % sgtitle('Average Amplitude Histograms for Each Vessel Class', ...

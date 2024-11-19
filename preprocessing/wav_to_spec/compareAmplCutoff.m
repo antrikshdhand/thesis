@@ -53,7 +53,7 @@ for i = 4
             processingOptions, spectrogramOptions, exportOptions);
 
         % Original spectrogram
-        fig = figure('units', 'normalized', 'outerposition', [0 0 0.4 0.35]);
+        fig = figure('units', 'normalized', 'outerposition', [0 0 0.4 0.33]);
         subplot(1, 2, 1);
         imagesc(f, t, P1');
         title('Before Cutoff', 'FontSize', 14, 'FontWeight', 'bold');
@@ -66,8 +66,8 @@ for i = 4
         subplot(1, 2, 2);
         imagesc(f, t, P2');
         title('After Cutoff', 'FontSize', 14, 'FontWeight', 'bold');
-        xlabel('Frequency (Hz)');
-        ylabel('Time (s)');
+        xlabel('Frequency (Hz)', 'FontSize', 11);
+        ylabel('Time (s)', 'FontSize', 11);
         colorbar;
         colormap('hot');
 
