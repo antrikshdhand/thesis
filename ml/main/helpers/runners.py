@@ -4,14 +4,14 @@ import tensorflow as tf
 import keras
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import gc
-from typing import Literal, List, Dict, Any, Optional, Tuple
+from typing import Literal, List, Dict, Any, Optional, Tuple, Callable
 
 from helpers import data
 from helpers.generators import DeepShipGenerator
 
 def k_fold_cross_validation(
     fold_dfs: List[pd.DataFrame],
-    model: keras.Model,
+    model_builder: Callable,
     fit_kwargs: Dict[str, Any],
     eval_kwargs: Dict[str, Any],
     ext: Literal['csv', 'npz', 'mat'],
@@ -22,7 +22,8 @@ def k_fold_cross_validation(
     """
     :param List[pd.DataFrame] fold_dfs: A list of DataFrames, each representing 
         one fold.
-    :param keras.Model model: A compiled `keras.Model` object.
+    :param Callable model_builder: A function pointer whose function returns a 
+        compiled `keras.Model()` object.
     :param Dict[str, Any] fit_kwargs: Additional keyword arguments to be fed into 
         `model.fit()`.
     :param Dict[str, Any] eval_kwargs: Additional keyword arguments to be fed into 
@@ -50,7 +51,10 @@ def k_fold_cross_validation(
         gc.collect()
         keras.backend.clear_session()
 
-        # Set validation fold
+        # ---- Re-initialise model each time ---- #
+        model = model_builder()
+
+        # ---- Load and initialise data generators ---- #
         val_idx = 0 if k == NUM_FOLDS - 1 else k + 1
 
         train_df, val_df, test_df = data.generate_kth_fold(
@@ -86,14 +90,14 @@ def k_fold_cross_validation(
 
         histories.append(history)
 
-        # # ---- Model evaluation ---- #
+        # ---- Model evaluation ---- #
         evaluation = model.evaluate(
             test_gen,
             **eval_kwargs
         ) 
         evals.append(evaluation)
 
-        # # ---- Predictions and Metrics ---- #
+        # ---- Predictions and Metrics ---- #
         y_true = []
         y_pred = []
         for batch_x, batch_y in test_gen:
