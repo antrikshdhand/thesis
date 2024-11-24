@@ -4,7 +4,7 @@ from keras.layers import \
 from keras.models import Model
 
 def get_paths(x, filters):
-    path1 = Conv2D(filters, kernel_size=(1, 1), padding="same")(x) # Test with and without padding="same"
+    path1 = Conv2D(filters, kernel_size=(1, 1), padding="same")(x) 
     path1 = BatchNormalization()(path1)
     # path1 = LeakyReLU()(path1) # Original paper used ReLU
     path1 = ReLU()(path1)
