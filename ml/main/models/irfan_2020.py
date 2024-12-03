@@ -58,8 +58,7 @@ def get_irfan_model(input_shape=(192, 192, 1)):
 
     x = layers.UpSampling2D(size=(2, 2), interpolation='bilinear')(x)
     x = layers.Conv2DTranspose(filters=1, kernel_size=(3, 3), strides=1, padding='same')(x)
-    x = layers.Activation('sigmoid')(x)
-    decoder_output = layers.BatchNormalization(name='decoder_output')(x)
+    decoder_output = layers.Activation('sigmoid')(x)
 
     irfan2020 = keras.Model(
         inputs=encoder_input,
