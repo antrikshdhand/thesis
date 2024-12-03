@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
 import keras
-
 import os
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Callable
+from pathlib import Path
+import random
+import cv2
 
 from helpers.data import import_spectrogram
+from helpers.synthetic_spectrograms import *
 
 
 class DeepShipGenerator(keras.utils.Sequence):
@@ -119,7 +122,8 @@ class N2NGenerator(keras.utils.Sequence):
                  mat_var_name: Optional[str] = None, 
                  batch_size: int = 32, 
                  shuffle: bool = True, 
-                 conv_channel: bool = True):    
+                 conv_channel: bool = True,
+                 **kwargs):    
         """
         Initialise the generator.
 
@@ -141,6 +145,8 @@ class N2NGenerator(keras.utils.Sequence):
 
         if self.shuffle:
             self.on_epoch_end()
+        
+        super().__init__(**kwargs)
 
     def __len__(self):
         """
@@ -155,18 +161,22 @@ class N2NGenerator(keras.utils.Sequence):
         """
 
         # First convert X spectrogram
-        batch_df = import_spectrogram(batch_df, ext='mat', mat_var_name='Pexp',
+        batch_df = import_spectrogram(batch_df, ext=self.ext, mat_var_name=self.mat_var_name,
                                       source_col='file_path_1', dest_col='spec_1')
         # Then convert y spectrogram
-        batch_df = import_spectrogram(batch_df, ext='mat', mat_var_name='Pexp',
+        batch_df = import_spectrogram(batch_df, ext=self.ext, mat_var_name=self.mat_var_name,
                                       source_col='file_path_2', dest_col='spec_2')
         
+        # Resize to fit U-Net
+        batch_df['spec_1'] = batch_df['spec_1'].apply(lambda x: cv2.resize(x, (256, 256)))
+        batch_df['spec_2'] = batch_df['spec_2'].apply(lambda x: cv2.resize(x, (256, 256)))
+
         X = np.stack(batch_df['spec_1'].to_numpy(copy=True))
         y = np.stack(batch_df['spec_2'].to_numpy(copy=True))
 
-        X = np.expand_dims(X, axis=-1)
-        y = np.expand_dims(y, axis=-1)
-
+        X = np.repeat(np.expand_dims(X, axis=-1), 3, axis=-1)
+        y = np.repeat(np.expand_dims(y, axis=-1), 3, axis=-1)
+        
         return X, y
 
     def __getitem__(self, index):
@@ -273,3 +283,178 @@ class ImageSegmentationGenerator(keras.utils.Sequence):
             self.spec_files, self.mask_files = zip(*temp)
             self.spec_files = list(self.spec_files)
             self.mask_files = list(self.mask_files)
+
+
+class NoisyImageTrainGenerator(keras.utils.Sequence):
+    """
+    Given a directory of images, this generator outputs X, y arrays of size
+    `batch_size` both containing the same images under two different noise
+    models `input_noise_model` and `target_noise_model`.
+
+    i.e. Outputs (noisy1, noisy2) pairs.
+    """
+
+    def __init__(self, image_dir: str, input_noise_model: Callable, 
+                target_noise_model: Callable, batch_size: int = 16, 
+                patch_edge_size: int = 256, **kwargs):
+
+        image_suffixes = ['.jpeg', '.png', '.jpg']
+        self.all_image_paths = [p for p in Path(image_dir).glob("**/*") if p.suffix.lower() 
+                                in image_suffixes]
+        self.num_images = len(self.all_image_paths)
+        if self.num_images == 0:
+            raise ValueError(f"The given directory {image_dir} does not contain any images.")
+
+        self.input_noise_model = input_noise_model
+        self.target_noise_model = target_noise_model
+        self.batch_size = batch_size
+        self.patch_edge_size = patch_edge_size 
+
+        super().__init__(**kwargs)
+
+    def __len__(self):
+        return self.num_images // self.batch_size 
+
+    def __getitem__(self, idx):
+        batch_size = self.batch_size
+        edge_size = self.patch_edge_size
+        X = np.zeros((batch_size, edge_size, edge_size, 3), dtype=np.float32)
+        y = np.zeros((batch_size, edge_size, edge_size, 3), dtype=np.float32)
+
+        image_counter = 0
+        while image_counter < batch_size:
+            image_path = random.choice(self.all_image_paths)
+            image = cv2.imread(str(image_path))
+
+            if image is None:
+                continue
+
+            h, w, _ = image.shape
+            if h < edge_size or w < edge_size:
+                continue
+
+            # Randomly choose a patch
+            i = np.random.randint(0, h - edge_size + 1)
+            j = np.random.randint(0, w - edge_size + 1)
+            patch = image[i:i + edge_size, j:j + edge_size]
+
+            # Add noise and normalize
+            input_patch = self.input_noise_model(patch.astype(np.float32)) / 255.0
+            target_patch = self.target_noise_model(patch.astype(np.float32)) / 255.0
+
+            # Store patches
+            X[image_counter] = input_patch
+            y[image_counter] = target_patch
+
+            image_counter += 1
+
+        return X, y
+    
+
+class NoisyImageValGenerator(keras.utils.Sequence):
+    """
+    Outputs (noisy, clean) pairs for validation.
+    """
+
+    def __init__(self, image_dir: str, val_noise_model: Callable, batch_size: int = 16, 
+                 patch_edge_size: int = 256, **kwargs):
+
+        image_suffixes = ['.jpeg', '.png', '.jpg']
+        self.all_image_paths = [p for p in Path(image_dir).glob("**/*") if p.suffix.lower() 
+                                in image_suffixes]
+        self.num_images = len(self.all_image_paths)
+        if self.num_images == 0:
+            raise ValueError(f"The given directory {image_dir} does not contain any images.")
+        
+        self.val_noise_model = val_noise_model
+        self.batch_size = batch_size
+        self.patch_edge_size = patch_edge_size 
+
+        super().__init__(**kwargs)
+
+    def __len__(self):
+        return self.num_images // self.batch_size 
+
+    def __getitem__(self, idx):
+        batch_size = self.batch_size
+        edge_size = self.patch_edge_size
+        X = np.zeros((batch_size, edge_size, edge_size, 3), dtype=np.float32)
+        y = np.zeros((batch_size, edge_size, edge_size, 3), dtype=np.float32)
+
+        image_counter = 0
+        while image_counter < batch_size:
+            image_path = random.choice(self.all_image_paths)
+            image = cv2.imread(str(image_path))
+
+            if image is None:
+                continue
+
+            h, w, _ = image.shape
+            if h < edge_size or w < edge_size:
+                continue
+
+            # Randomly choose a patch
+            i = np.random.randint(0, h - edge_size + 1)
+            j = np.random.randint(0, w - edge_size + 1)
+            clean_patch = image[i:i + edge_size, j:j + edge_size]
+
+            # Add noise and normalize
+            noisy_patch = self.val_noise_model(clean_patch.astype(np.float32)) / 255.0
+            clean_patch = clean_patch.astype(np.float32) / 255.0
+
+            X[image_counter] = noisy_patch
+            y[image_counter] = clean_patch
+
+            image_counter += 1
+
+        return X, y
+
+
+class SyntheticSpectrogramGenerator(keras.utils.Sequence):
+    def __init__(self, batch_size, num_batches, fs, duration, window, noverlap, nfft, **kwargs):
+        self.batch_size = batch_size
+        self._num_batches = num_batches 
+        self.fs = fs
+        self.duration = duration
+        self.window = window
+        self.noverlap = noverlap
+        self.nfft = nfft
+
+        super().__init__(**kwargs)
+
+    def __len__(self):
+        return self._num_batches
+
+    def __getitem__(self, idx):
+        X = np.zeros((self.batch_size, 256, 256, 3))  # Updated to 3 channels
+        y = np.zeros((self.batch_size, 256, 256, 3))  # Updated to 3 channels
+
+        image_counter = 0
+        for _ in range(self.batch_size):
+            _, clean_signal, _ = generate_sine_wave(self.duration, self.fs)
+
+            noisy_signal_1, _ = add_gaussian_noise(clean_signal)
+            noisy_signal_2, _ = add_gaussian_noise(clean_signal)
+
+            # Generate spectrograms
+            _, _, noisy_spectrogram_1 = create_spectrogram(noisy_signal_1, self.fs, self.window, self.noverlap, self.nfft)
+            _, _, noisy_spectrogram_2 = create_spectrogram(noisy_signal_2, self.fs, self.window, self.noverlap, self.nfft)
+
+            # Normalize spectrograms for neural network input
+            noisy_spectrogram_1 = np.log1p(noisy_spectrogram_1)
+            noisy_spectrogram_2 = np.log1p(noisy_spectrogram_2)
+
+            # Resize for U-Net dimensions
+            noisy_spectrogram_1 = cv2.resize(noisy_spectrogram_1, (256, 256))
+            noisy_spectrogram_2 = cv2.resize(noisy_spectrogram_2, (256, 256))
+
+            # Expand to 3 channels
+            noisy_spectrogram_1 = np.repeat(np.expand_dims(noisy_spectrogram_1, axis=-1), 3, axis=-1)
+            noisy_spectrogram_2 = np.repeat(np.expand_dims(noisy_spectrogram_2, axis=-1), 3, axis=-1)
+
+            X[image_counter] = noisy_spectrogram_1
+            y[image_counter] = noisy_spectrogram_2
+
+            image_counter += 1
+
+        return X, y

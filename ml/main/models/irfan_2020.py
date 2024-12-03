@@ -71,7 +71,7 @@ def get_irfan_model(input_shape=(192, 192, 1)):
 
 if __name__ == '__main__':
  
-    irfan = get_irfan_model()
+    irfan = get_irfan_model(input_shape=(192, 192, 3))
 
     irfan.compile(
         optimizer=optimizers.Adam(learning_rate=0.001),
