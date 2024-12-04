@@ -17,7 +17,6 @@ def calculate_metrics(evals: list):
 def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
     """
     Plots the training history for specified metrics over epochs.
-    
     :param history: Keras History object from model.fit()
     :param metrics: List of metric names to plot (e.g., ['loss', 'psnr'])
     :return: matplotlib figure containing the plots
@@ -51,6 +50,40 @@ def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
         fig.tight_layout()
 
     return fig
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def get_psnr_and_loss_curves(history: keras.callbacks.History):
+    # Extract epochs
+    epochs = np.arange(1, len(history.history['psnr']) + 1, dtype=int)
+
+    # PSNR Plot
+    fig_psnr, ax_psnr = plt.subplots()
+    ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
+    ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
+    ax_psnr.set_title('PSNR over epochs')
+    ax_psnr.set_xlabel('Epochs')
+    ax_psnr.set_ylabel('PSNR (dB)')
+    ax_psnr.xaxis.set_major_locator(mticker.MultipleLocator(1))
+    ax_psnr.legend()
+    ax_psnr.grid(True)
+    fig_psnr.tight_layout()
+
+    # Loss Plot
+    fig_loss, ax_loss = plt.subplots()
+    ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
+    ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
+    ax_loss.set_title('Loss over epochs')
+    ax_loss.set_xlabel('Epochs')
+    ax_loss.set_ylabel('Loss')
+    ax_loss.xaxis.set_major_locator(mticker.MultipleLocator(1))
+    ax_loss.legend()
+    ax_loss.grid(True)
+    fig_loss.tight_layout()
+
+    return fig_psnr, fig_loss
+   
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
     N_FOLDS = len(histories)
