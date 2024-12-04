@@ -1,11 +1,10 @@
 import tensorflow as tf
 import keras
 from keras.layers import \
-    Conv2D, BatchNormalization, ReLU, LeakyReLU, MaxPool2D, \
-    UpSampling2D, Concatenate, Input, Dropout
+    Conv2D, LeakyReLU, MaxPool2D, \
+    UpSampling2D, Concatenate, Input
 
 def down_block(x, filters, initializer, use_maxpool=True):
-
     x = Conv2D(filters, kernel_size=(3, 3), padding="same", kernel_initializer=initializer)(x) 
     x = LeakyReLU(alpha=0.1)(x) 
 
@@ -29,7 +28,7 @@ def up_block(x, y, filters, initializer):
 
     return x
 
-def get_unet_model(input_shape=(256, 256, 3), classes=4):
+def get_unet_model(input_shape=(256, 256, 3)):
     filters = [64, 128, 256, 512, 1024]
     initializer = tf.keras.initializers.HeNormal(seed=44)
 
@@ -49,14 +48,14 @@ def get_unet_model(input_shape=(256, 256, 3), classes=4):
     x = up_block(x, temp2, filters[1], initializer=initializer)
     x = up_block(x, temp1, filters[0], initializer=initializer)
 
-    output = Conv2D(classes, kernel_size=(1, 1), activation='linear', kernel_initializer=initializer)(x)
+    output = Conv2D(input_shape[-1], kernel_size=(1, 1), activation='linear', kernel_initializer=initializer)(x)
 
     model = keras.models.Model(inputs=model_input, outputs=output, name='unet')
 
     return model
 
 if __name__ == "__main__":
-    model = get_unet_model(input_shape=(512, 512, 3), classes=10)
+    model = get_unet_model(input_shape=(512, 512, 3), channels=10)
     print(model.summary())
     
     input_image = tf.random.uniform([1, 512, 512, 3])
