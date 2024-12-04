@@ -30,6 +30,7 @@ class DeepShipGenerator(keras.utils.Sequence):
                  batch_size: int = 32, 
                  shuffle: bool = True, 
                  conv_channel: bool = True, 
+                 zero_one_normalised: bool = False,
                  X_only: bool = False,
                  **kwargs):
         """
@@ -42,6 +43,7 @@ class DeepShipGenerator(keras.utils.Sequence):
         :param batch_size: Size of each batch.
         :param shuffle: Whether to shuffle data at the end of each epoch.
         :param conv_channel: Whether to add a channel dimension for CNN input.
+        :param zero_one_normalised: Whether to normalise spectrograms between [0, 1].
         :param X_only: If True, outputs (X, X) for autoencoder tasks; otherwise, (X, y).
         """
 
@@ -52,6 +54,7 @@ class DeepShipGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.conv_channel = conv_channel
+        self.zero_one_normalised = zero_one_normalised
         self.X_only = X_only
 
         self.n = len(self.df)
@@ -74,7 +77,12 @@ class DeepShipGenerator(keras.utils.Sequence):
         # Import spectrograms for each file in the batch
         batch_df = import_spectrogram(batch_df, self.ext, self.mat_var_name,
                                       source_col='files', dest_col='spectrogram')
+
         X = np.stack(batch_df['spectrogram'].to_numpy(copy=True))
+
+        X_min = X.min(axis=(1, 2), keepdims=True)
+        X_max = X.max(axis=(1, 2), keepdims=True)
+        X = (X - X_min) / (X_max - X_min) # normalised
 
         # Add channel dimension if using convolutional layers
         if self.conv_channel:
