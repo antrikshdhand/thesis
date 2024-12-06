@@ -1,0 +1,1 @@
+This was the original attempt which more closely reflects the Noise2Noise paper because it uses coloured images with pixel crops of 256x256 pixels.
