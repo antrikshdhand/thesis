@@ -1,15 +1,18 @@
 import numpy as np
 import cv2
 
-def gaussian_noise(img):
+def gaussian_noise(img, stddev=None):
     """
     Add Gaussian noise to an image. The standard deviation is sampled
     randomly from [0, 50] as per the Noise2Noise paper. Automatically handles
     whether the image is normalised or not based on its range.
     """
+    np.random.seed(0)
+
     MIN_STDDEV = 0
     MAX_STDDEV = 50
-    stddev = np.random.uniform(MIN_STDDEV, MAX_STDDEV)
+    if not stddev:
+        stddev = np.random.uniform(MIN_STDDEV, MAX_STDDEV)
 
     noisy_img = img.astype(np.float64)
     noise = np.random.normal(loc=0.0, scale=stddev, size=img.shape)
