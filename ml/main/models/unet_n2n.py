@@ -55,9 +55,9 @@ def get_unet_model(input_shape=(256, 256, 3)):
     return model
 
 if __name__ == "__main__":
-    model = get_unet_model(input_shape=(512, 512, 3), channels=10)
+    model = get_unet_model(input_shape=(192, 192, 1))
     print(model.summary())
     
-    input_image = tf.random.uniform([1, 512, 512, 3])
-    output = model(input_image)
-    print(output)
+    # input_image = tf.random.uniform([1, 512, 512, 3])
+    # output = model(input_image)
+    # print(output)

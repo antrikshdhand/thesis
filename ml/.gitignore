@@ -4,6 +4,8 @@
 # Any saved keras models (due to GitHub size restrictions)
 *.keras
 
+data
+
 # TAKEN FROM GITHUB RECOMMENDED PYTHON GITIGNORE
 
 # Byte-compiled / optimized / DLL files

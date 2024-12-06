@@ -3,6 +3,10 @@ import numpy as np
 import keras
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import matplotlib.patches
+import cv2
+
+from helpers import noise_models
 
 def check_gpu_use():
     if len(tf.config.list_physical_devices('GPU')) == 0:
@@ -51,38 +55,71 @@ def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
 
     return fig
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-def get_psnr_and_loss_curves(history: keras.callbacks.History):
+def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
     # Extract epochs
-    epochs = np.arange(1, len(history.history['psnr']) + 1, dtype=int)
+    num_epochs = len(history.history['psnr'])
+    epochs = np.arange(1, num_epochs + 1, dtype=int)
 
-    # PSNR Plot
-    fig_psnr, ax_psnr = plt.subplots()
-    ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
-    ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
-    ax_psnr.set_title('PSNR over epochs')
-    ax_psnr.set_xlabel('Epochs')
-    ax_psnr.set_ylabel('PSNR (dB)')
-    ax_psnr.xaxis.set_major_locator(mticker.MultipleLocator(1))
-    ax_psnr.legend()
-    ax_psnr.grid(True)
-    fig_psnr.tight_layout()
+    border_space = 0.05
 
-    # Loss Plot
-    fig_loss, ax_loss = plt.subplots()
-    ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
-    ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
-    ax_loss.set_title('Loss over epochs')
-    ax_loss.set_xlabel('Epochs')
-    ax_loss.set_ylabel('Loss')
-    ax_loss.xaxis.set_major_locator(mticker.MultipleLocator(1))
-    ax_loss.legend()
-    ax_loss.grid(True)
-    fig_loss.tight_layout()
+    if together:
+        # Create a single figure with 2 subplots side by side
+        fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(12, 6))
+        
+        # PSNR Plot
+        ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
+        ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
+        ax_psnr.set_title('PSNR over epochs')
+        ax_psnr.set_xlabel('Epochs')
+        ax_psnr.set_ylabel('PSNR (dB)')
+        if num_epochs <= 10:
+            ax_psnr.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
+            ax_psnr.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax_psnr.legend()
+        ax_psnr.grid(True)
 
-    return fig_psnr, fig_loss
+        # Loss Plot
+        ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
+        ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
+        ax_loss.set_title('Loss over epochs')
+        ax_loss.set_xlabel('Epochs')
+        ax_loss.set_ylabel('Loss')
+        if num_epochs <= 10:
+            ax_loss.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
+            ax_loss.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax_loss.legend()
+        ax_loss.grid(True)
+
+        return fig
+    
+    else:
+        # Separate figures for PSNR and Loss
+        fig_psnr, ax_psnr = plt.subplots()
+        ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
+        ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
+        ax_psnr.set_title('PSNR over epochs')
+        ax_psnr.set_xlabel('Epochs')
+        ax_psnr.set_ylabel('PSNR (dB)')
+        if num_epochs <= 10:
+            ax_psnr.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
+            ax_psnr.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax_psnr.legend()
+        ax_psnr.grid(True)
+
+        # Loss Plot
+        fig_loss, ax_loss = plt.subplots()
+        ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
+        ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
+        ax_loss.set_title('Loss over epochs')
+        ax_loss.set_xlabel('Epochs')
+        ax_loss.set_ylabel('Loss')
+        if num_epochs <= 10:
+            ax_loss.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
+            ax_loss.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax_loss.legend()
+        ax_loss.grid(True)
+
+        return fig_psnr, fig_loss
    
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
@@ -300,3 +337,75 @@ def get_acc_loss_curves_by_fold(histories: list[keras.callbacks.History], overla
         fig.tight_layout(rect=[0, 0, 1, 0.98])
 
     return fig
+
+
+def plot_patches(original_image, ground_truth_patch, noisy_patch, 
+                 denoised_patch, top_left_coords: tuple, patch_size):
+
+    ground_truth_fig, ax = plt.subplots()
+
+    ax.imshow(original_image, cmap='gray')
+    ax.axis("off")
+    ax.set_title("Original Image")
+    rect = matplotlib.patches.Rectangle(
+        top_left_coords, patch_size, patch_size, 
+        linewidth=2, edgecolor="orange", facecolor="none"
+    )
+    ax.add_patch(rect)
+    ground_truth_fig.tight_layout()
+
+    patches_fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
+    axes[0].axis("off")
+    axes[0].set_title("Ground Truth Patch")
+
+    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
+    axes[1].axis("off")
+    axes[1].set_title("Noisy Patch")
+
+    axes[2].imshow(denoised_patch.squeeze(), cmap='gray')
+    axes[2].axis("off")
+    axes[2].set_title("Denoised Patch")
+    patches_fig.tight_layout(pad=3.0)
+
+    return ground_truth_fig, patches_fig
+
+
+def test_model_on_image(image_path, model, patch_size=192, 
+                        zero_one_normalisation=True, greyscale=True,
+                        stddev=None, seed=42):
+    original_image = cv2.imread(image_path)
+    np.random.seed(seed)
+
+    if greyscale:
+        original_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        original_image = np.expand_dims(original_image, axis=-1)
+    else:
+        original_image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+
+    if zero_one_normalisation:
+        original_image = original_image.astype(np.float32) / 255.0
+
+    h, w, _ = original_image.shape
+    if h < patch_size or w < patch_size:
+        raise ValueError(f"Image size ({h}, {w}) is smaller than patch size {patch_size}.")
+
+    # Select a random patch
+    top_left_h = np.random.randint(0, h - patch_size + 1)
+    top_left_w = np.random.randint(0, w - patch_size + 1)
+
+    ground_truth_patch = original_image[top_left_h:top_left_h + patch_size, top_left_w:top_left_w + patch_size]
+    noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
+    denoised_patch = model.predict(np.expand_dims(noisy_patch, axis=0))
+    
+    denoised_patch = np.clip(denoised_patch, 0, 1) * 255.0
+    denoised_patch = denoised_patch.astype(np.uint8)
+
+    ground_truth_fig, patches_fig = plot_patches(
+        original_image, ground_truth_patch, noisy_patch,
+        denoised_patch, top_left_coords=(top_left_w, top_left_h), 
+        patch_size=patch_size
+    )
+
+    return ground_truth_fig, patches_fig
