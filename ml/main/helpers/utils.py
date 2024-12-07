@@ -17,6 +17,9 @@ def check_gpu_use():
 def calculate_metrics(evals: list):
     mean = np.mean(evals, axis=0)
     return mean[0], mean[1] # loss, acc
+    
+def psnr(y_true, y_pred):
+    return tf.image.psnr(y_true, y_pred, max_val=1.0)
 
 def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
     """

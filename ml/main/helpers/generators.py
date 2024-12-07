@@ -179,7 +179,18 @@ class N2NGenerator(keras.utils.Sequence):
 
         X = np.stack(batch_df['spec_1'].to_numpy(copy=True))
         y = np.stack(batch_df['spec_2'].to_numpy(copy=True))
-        
+
+        X = np.expand_dims(X, axis=-1)
+        y = np.expand_dims(y, axis=-1)
+
+        X_min = X.min(axis=(1, 2), keepdims=True)
+        X_max = X.max(axis=(1, 2), keepdims=True)
+        X = (X - X_min) / (X_max - X_min) # normalised
+
+        y_min = y.min(axis=(1, 2), keepdims=True)
+        y_max = y.max(axis=(1, 2), keepdims=True)
+        y = (y - y_min) / (y_max - y_min) # normalised
+
         return X, y
 
     def __getitem__(self, index):
