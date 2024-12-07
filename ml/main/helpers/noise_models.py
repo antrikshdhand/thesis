@@ -7,11 +7,9 @@ def gaussian_noise(img, stddev=None):
     randomly from [0, 50] as per the Noise2Noise paper. Automatically handles
     whether the image is normalised or not based on its range.
     """
-    np.random.seed(0)
-
     MIN_STDDEV = 0
     MAX_STDDEV = 50
-    if not stddev:
+    if stddev is None:
         stddev = np.random.uniform(MIN_STDDEV, MAX_STDDEV)
 
     noisy_img = img.astype(np.float64)
