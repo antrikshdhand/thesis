@@ -21,9 +21,6 @@ def calculate_metrics(evals: list):
 def psnr(y_true, y_pred):
     return tf.image.psnr(y_true, y_pred, max_val=1.0)
 
-def psnr(y_true, y_pred):
-    return tf.image.psnr(y_true, y_pred, max_val=1.0)
-
 def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
     """
     Plots the training history for specified metrics over epochs.
