@@ -391,7 +391,7 @@ class NoisyImageValGenerator(keras.utils.Sequence):
                  image_dir: str, 
                  noise_model: Callable, 
                  batch_size: int = 16, 
-                 patch_edge_size: int = 256, 
+                 patch_edge_size: int = 192, 
                  zero_one_normalisation: bool = True,
                  greyscale: bool = True,
                  **kwargs):

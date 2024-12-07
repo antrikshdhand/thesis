@@ -21,6 +21,9 @@ def calculate_metrics(evals: list):
 def psnr(y_true, y_pred):
     return tf.image.psnr(y_true, y_pred, max_val=1.0)
 
+def psnr(y_true, y_pred):
+    return tf.image.psnr(y_true, y_pred, max_val=1.0)
+
 def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
     """
     Plots the training history for specified metrics over epochs.
@@ -62,8 +65,6 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
     # Extract epochs
     num_epochs = len(history.history['psnr'])
     epochs = np.arange(1, num_epochs + 1, dtype=int)
-
-    border_space = 0.05
 
     if together:
         # Create a single figure with 2 subplots side by side
@@ -331,44 +332,8 @@ def get_acc_loss_curves_by_fold(histories: list[keras.callbacks.History], overla
     return fig
 
 
-def plot_patches(original_image, ground_truth_patch, noisy_patch, 
-                 denoised_patch, top_left_coords: tuple, patch_size):
-
-    ground_truth_fig, ax = plt.subplots()
-
-    ax.imshow(original_image, cmap='gray')
-    ax.axis("off")
-    ax.set_title("Original Image")
-    rect = matplotlib.patches.Rectangle(
-        top_left_coords, patch_size, patch_size, 
-        linewidth=2, edgecolor="orange", facecolor="none"
-    )
-    ax.add_patch(rect)
-    ground_truth_fig.tight_layout()
-
-    patches_fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-
-    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
-    axes[0].axis("off")
-    axes[0].set_title("Ground Truth Patch")
-
-    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
-    axes[1].axis("off")
-    axes[1].set_title("Noisy Patch")
-
-    axes[2].imshow(denoised_patch.squeeze(), cmap='gray')
-    axes[2].axis("off")
-    axes[2].set_title("Denoised Patch")
-    patches_fig.tight_layout(pad=3.0)
-
-    return ground_truth_fig, patches_fig
-
-
-def test_model_on_image(image_path, model, patch_size=192, 
-                        zero_one_normalisation=True, greyscale=True,
-                        stddev=None, seed=42):
-    original_image = cv2.imread(image_path)
-    np.random.seed(seed)
+def image_to_ground_truth_patch(image_path, patch_coords=None, patch_size=192,
+                                zero_one_normalisation=True, greyscale=True):
 
     if greyscale:
         original_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -383,21 +348,129 @@ def test_model_on_image(image_path, model, patch_size=192,
     if h < patch_size or w < patch_size:
         raise ValueError(f"Image size ({h}, {w}) is smaller than patch size {patch_size}.")
 
-    # Select a random patch
-    top_left_h = np.random.randint(0, h - patch_size + 1)
-    top_left_w = np.random.randint(0, w - patch_size + 1)
+    if patch_coords is None:
+        # Select a random patch
+        top_left_w = np.random.randint(0, w - patch_size + 1)
+        top_left_h = np.random.randint(0, h - patch_size + 1)
+    else:
+        top_left_w = patch_coords[0]
+        top_left_h = patch_coords[1]
+    top_left_coords = (top_left_w, top_left_h)
 
-    ground_truth_patch = original_image[top_left_h:top_left_h + patch_size, top_left_w:top_left_w + patch_size]
+    ground_truth_patch = original_image[top_left_h:top_left_h + patch_size, top_left_w:top_left_w + patch_size] 
+
+    return original_image, ground_truth_patch, top_left_coords
+
+
+def plot_ground_truth_with_patch(original_image, top_left_coords, patch_size):
+    ground_truth_fig, ax = plt.subplots()
+
+    ax.imshow(original_image, cmap='gray')
+    ax.axis("off")
+    ax.set_title("Original Image")
+    rect = matplotlib.patches.Rectangle(
+        top_left_coords, patch_size, patch_size, 
+        linewidth=2, edgecolor="orange", facecolor="none"
+    )
+    ax.add_patch(rect)
+    ground_truth_fig.tight_layout()
+
+    return ground_truth_fig
+
+def plot_patches(ground_truth_patch, noisy_patch, denoised_patch):
+    patches_fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
+    axes[0].axis("off")
+    axes[0].set_title("Ground Truth Patch\n", fontdict={'fontsize':16})
+
+    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
+    axes[1].axis("off")
+    axes[1].set_title("Noisy Patch\n", fontdict={'fontsize':16})
+
+    axes[2].imshow(denoised_patch.squeeze(), cmap='gray')
+    axes[2].axis("off")
+    axes[2].set_title("Denoised Patch\n", fontdict={'fontsize':16})
+
+    patches_fig.tight_layout()
+
+    return patches_fig
+
+def test_model_on_image(image_path, model, patch_coords=None, patch_size=192, 
+                        zero_one_normalisation=True, greyscale=True,
+                        stddev=None):
+    original_image, ground_truth_patch, top_left_coords = image_to_ground_truth_patch(
+        image_path, patch_coords, patch_size, zero_one_normalisation, greyscale
+    )
     noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
-    denoised_patch = model.predict(np.expand_dims(noisy_patch, axis=0))
     
+    denoised_patch = model.predict(np.expand_dims(noisy_patch, axis=0))
     denoised_patch = np.clip(denoised_patch, 0, 1) * 255.0
     denoised_patch = denoised_patch.astype(np.uint8)
 
-    ground_truth_fig, patches_fig = plot_patches(
-        original_image, ground_truth_patch, noisy_patch,
-        denoised_patch, top_left_coords=(top_left_w, top_left_h), 
-        patch_size=patch_size
+    ground_truth_fig = plot_ground_truth_with_patch(
+        original_image, top_left_coords=top_left_coords, patch_size=patch_size
     )
+
+    patches_fig = plot_patches(ground_truth_patch, noisy_patch, denoised_patch)
+
+    return ground_truth_fig, patches_fig
+
+
+def compare_two_models_denoising(
+        image_path, model1, model2, patch_coords=None,
+        patch_size=192, zero_one_normalisation=True,
+        greyscale=True, stddev=None, model1_name=None, model2_name=None):
+
+    original_image, ground_truth_patch, top_left_coords = image_to_ground_truth_patch(
+        image_path, patch_coords, patch_size, zero_one_normalisation, greyscale
+    )
+    
+    noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
+
+    denoised_patch_1 = model1.predict(np.expand_dims(noisy_patch, axis=0))
+    denoised_patch_1 = np.clip(denoised_patch_1, 0, 1) * 255.0
+    denoised_patch_1 = denoised_patch_1.astype(np.uint8)
+    
+    denoised_patch_2 = model2.predict(np.expand_dims(noisy_patch, axis=0))
+    denoised_patch_2 = np.clip(denoised_patch_2, 0, 1) * 255.0
+    denoised_patch_2 = denoised_patch_2.astype(np.uint8)
+
+    # Plot the original image with the patch rectangle
+    ground_truth_fig = plot_ground_truth_with_patch(
+        original_image, top_left_coords=top_left_coords, patch_size=patch_size
+    )
+
+    # Plot the ground truth patch, noisy patch, and both denoised patches
+    patches_fig, axes = plt.subplots(1, 4, figsize=(14, 5))
+
+    fontsize = 17
+
+    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
+    axes[0].axis("off")
+    axes[0].set_title("Ground Truth Patch\n", fontdict={'fontsize':fontsize})
+
+    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
+    axes[1].axis("off")
+    axes[1].set_title("Noisy Patch\n", fontdict={'fontsize':fontsize})
+
+    # Plot Denoised Patch from Model 1
+    axes[2].imshow(denoised_patch_1.squeeze(), cmap='gray')
+    axes[2].axis("off")
+    if model1_name is None:
+        axes[2].set_title("Denoised Patch (Model 1)\n", fontdict={'fontsize':fontsize})
+    else:
+        axes[2].set_title(f"Denoised Patch ({model1_name})\n", fontdict={'fontsize':fontsize})
+
+    # Plot Denoised Patch from Model 2
+    axes[3].imshow(denoised_patch_2.squeeze(), cmap='gray')
+    axes[3].axis("off")
+    if model2_name is None:
+        axes[3].set_title("Denoised Patch (Model 2)\n", fontdict={'fontsize':fontsize})
+    else:
+        axes[3].set_title(f"Denoised Patch ({model2_name})\n", fontdict={'fontsize':fontsize})
+
+    patches_fig.tight_layout(pad=0.2)
+    # patches_fig.subplots_adjust(top=0.85)
 
     return ground_truth_fig, patches_fig
