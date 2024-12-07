@@ -63,11 +63,9 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
     num_epochs = len(history.history['psnr'])
     epochs = np.arange(1, num_epochs + 1, dtype=int)
 
-    border_space = 0.05
-
     if together:
         # Create a single figure with 2 subplots side by side
-        fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(12, 5))
+        fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(14, 5))
         
         # PSNR Plot
         ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
@@ -88,6 +86,7 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         ax_loss.grid(True)
 
         fig.tight_layout()
+
         return fig
     
     else:
@@ -98,9 +97,6 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         ax_psnr.set_title('PSNR over epochs')
         ax_psnr.set_xlabel('Epochs')
         ax_psnr.set_ylabel('PSNR (dB)')
-        if num_epochs <= 10:
-            ax_psnr.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
-            ax_psnr.xaxis.set_major_locator(mticker.MultipleLocator(1))
         ax_psnr.legend()
         ax_psnr.grid(True)
 
@@ -111,14 +107,10 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         ax_loss.set_title('Loss over epochs')
         ax_loss.set_xlabel('Epochs')
         ax_loss.set_ylabel('Loss')
-        if num_epochs <= 10:
-            ax_loss.set_xlim(left=epochs[0] - border_space, right=epochs[-1] + border_space)
-            ax_loss.xaxis.set_major_locator(mticker.MultipleLocator(1))
         ax_loss.legend()
         ax_loss.grid(True)
 
-        return fig_psnr, fig_loss
-   
+        return fig_psnr, fig_loss 
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
     N_FOLDS = len(histories)
