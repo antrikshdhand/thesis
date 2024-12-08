@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib.patches
 import cv2
+import pandas as pd
+from typing import Union
 
 from helpers import noise_models
 
@@ -58,9 +60,9 @@ def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
 
     return fig
 
-def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
+def _psnr_loss_curves_from_dict(history_dict: dict, together=False):
     # Extract epochs
-    num_epochs = len(history.history['psnr'])
+    num_epochs = len(history_dict['psnr'])
     epochs = np.arange(1, num_epochs + 1, dtype=int)
 
     if together:
@@ -68,8 +70,8 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(14, 5))
         
         # PSNR Plot
-        ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
-        ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
+        ax_psnr.plot(epochs, history_dict['psnr'], label='PSNR', marker='o')
+        ax_psnr.plot(epochs, history_dict['val_psnr'], label='Validation PSNR', marker='s')
         ax_psnr.set_title('PSNR over epochs')
         ax_psnr.set_xlabel('Epochs')
         ax_psnr.set_ylabel('PSNR (dB)')
@@ -77,8 +79,8 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         ax_psnr.grid(True)
 
         # Loss Plot
-        ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
-        ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
+        ax_loss.plot(epochs, history_dict['loss'], label='Loss', marker='o')
+        ax_loss.plot(epochs, history_dict['val_loss'], label='Validation loss', marker='s')
         ax_loss.set_title('Loss over epochs')
         ax_loss.set_xlabel('Epochs')
         ax_loss.set_ylabel('Loss')
@@ -92,8 +94,8 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
     else:
         # Separate figures for PSNR and Loss
         fig_psnr, ax_psnr = plt.subplots()
-        ax_psnr.plot(epochs, history.history['psnr'], label='PSNR', marker='o')
-        ax_psnr.plot(epochs, history.history['val_psnr'], label='Validation PSNR', marker='s')
+        ax_psnr.plot(epochs, history_dict['psnr'], label='PSNR', marker='o')
+        ax_psnr.plot(epochs, history_dict['val_psnr'], label='Validation PSNR', marker='s')
         ax_psnr.set_title('PSNR over epochs')
         ax_psnr.set_xlabel('Epochs')
         ax_psnr.set_ylabel('PSNR (dB)')
@@ -102,8 +104,8 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
 
         # Loss Plot
         fig_loss, ax_loss = plt.subplots()
-        ax_loss.plot(epochs, history.history['loss'], label='Loss', marker='o')
-        ax_loss.plot(epochs, history.history['val_loss'], label='Validation loss', marker='s')
+        ax_loss.plot(epochs, history_dict['loss'], label='Loss', marker='o')
+        ax_loss.plot(epochs, history_dict['val_loss'], label='Validation loss', marker='s')
         ax_loss.set_title('Loss over epochs')
         ax_loss.set_xlabel('Epochs')
         ax_loss.set_ylabel('Loss')
@@ -111,6 +113,19 @@ def get_psnr_and_loss_curves(history: keras.callbacks.History, together=False):
         ax_loss.grid(True)
 
         return fig_psnr, fig_loss 
+
+def get_psnr_and_loss_curves(history: Union[keras.callbacks.History, str], together=False):
+    """
+    :param history: Either the output of model.fit() or a filepath to a training log.
+    :return: If `together=True`, returns one figure. Else, returns (fig_psnr, fig_loss)
+    """
+    if type(history) == keras.callbacks.History:
+        return _psnr_loss_curves_from_dict(history.history, together)
+    elif type(history) == str:
+        df = pd.read_csv(history, index_col="epoch")
+        history_dict = df.to_dict(orient='list')
+        return _psnr_loss_curves_from_dict(history_dict, together)
+
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
     N_FOLDS = len(histories)
