@@ -59,11 +59,11 @@ def up_block(x, skip, filters):
 
     return x
 
-def get_unetpro_model(input_size, dropout):
+def get_unetpro_model(input_shape=(192, 192, 1), dropout=0.3):
     filters = [8, 16, 32, 64, 128]
 
     # ENCODER
-    model_input = Input(shape=input_size)
+    model_input = Input(shape=input_shape)
 
     x, skip1 = down_block(model_input, filters[0])
     x = Dropout(dropout)(x)
@@ -94,7 +94,7 @@ def get_unetpro_model(input_size, dropout):
     
     # Output layer
     output = Conv2D(
-        input_size[-1],
+        input_shape[-1],
         kernel_size=(1, 1),
         activation="sigmoid"
     )(x) 

@@ -159,6 +159,8 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         """
         Initialise the generator.
 
+        :param multiple_recordings_df: A dataframe containing all segments whose 
+            ships have multiple recordings.
         :param ext: File extension for spectrogram files ('mat', 'csv', or 'npz').
         :param mat_var_name: Variable name in .mat files if applicable.
         :param batch_size: Size of each batch.
@@ -171,9 +173,6 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.conv_channel = conv_channel
-
-        # Get the initial pairings
-        self.on_epoch_end()
         
         super().__init__(**kwargs)
 
@@ -181,50 +180,7 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         """
         Returns the number of batches per epoch.
         """
-        return len(self.pairings_df) // self.batch_size
-
-    def __make_pairs_different_recording(self, multiple_recordings_df: pd.DataFrame):
-        """
-        Creates pairs of recordings from different dates for each ship.
-
-        :param multiple_recordings_df: DataFrame of ships with multiple recordings.
-        :return: DataFrame with pairs of recordings from different dates.
-        """
-        pairings = {
-            "ship_name": [],
-            "file_path_1": [],
-            "date_seg_1": [],
-            "file_path_2": [],
-            "date_seg_2": []
-        }
-        used_files = set()
-
-        for ship_name, ship_data in multiple_recordings_df.groupby("ship_name"):
-            for _, row in ship_data.iterrows():
-                if row["file_path"] in used_files:
-                    continue
-
-                current_date = row['date']
-                other_recordings = ship_data[ship_data['date'] != current_date]
-
-                if other_recordings.empty:
-                    continue
-                
-                random_pair = other_recordings.sample(1).iloc[0]
-                if random_pair["file_path"] in used_files:
-                    continue
-
-                pairings["ship_name"].append(ship_name)
-                pairings["file_path_1"].append(row["file_path"])
-                pairings["date_seg_1"].append(f"{row['date']}_{row['seg']}")
-                pairings["file_path_2"].append(random_pair["file_path"])
-                pairings["date_seg_2"].append(f"{random_pair['date']}_{random_pair['seg']}")
-
-                used_files.update([row["file_path"], random_pair["file_path"]])
-
-        pairings_df = pd.DataFrame(pairings)
-
-        return pairings_df
+        return len(self.multiple_recordings_df) // self.batch_size
 
     def __get_data(self, batch_df):
         """
@@ -233,11 +189,15 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         """
 
         # First convert X spectrogram
-        batch_df = import_spectrogram(batch_df, ext=self.ext, mat_var_name=self.mat_var_name,
-                                      source_col='file_path_1', dest_col='spec_1')
+        batch_df = import_spectrogram(batch_df, ext=self.ext, 
+                                      mat_var_name=self.mat_var_name,
+                                      source_col='original_spectrogram', 
+                                      dest_col='spec_1')
         # Then convert y spectrogram
-        batch_df = import_spectrogram(batch_df, ext=self.ext, mat_var_name=self.mat_var_name,
-                                      source_col='file_path_2', dest_col='spec_2')
+        batch_df = import_spectrogram(batch_df, ext=self.ext, 
+                                      mat_var_name=self.mat_var_name,
+                                      source_col='paired_spectrogram', 
+                                      dest_col='spec_2')
 
         X = np.stack(batch_df['spec_1'].to_numpy(copy=True))
         y = np.stack(batch_df['spec_2'].to_numpy(copy=True))
@@ -258,27 +218,44 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
 
         return X, y
 
+    def _get_possible_pairings(self, ship_name, date):
+        # Any segment which has the same ship name but NOT the same date is valid
+        return self.multiple_recordings_df[
+            (self.multiple_recordings_df["ship_name"] == ship_name) & 
+            (self.multiple_recordings_df["date"] != date)
+        ]
+
+    def _assign_pairs(self, batch_segments):
+        batch_specs = {
+            "original_spectrogram": [],
+            "paired_spectrogram": []
+        }
+        for _, row in batch_segments.iterrows():
+            batch_specs["original_spectrogram"].append(row["file_path"])
+            possible_pairings = self._get_possible_pairings(row["ship_name"], row["date"])
+            if possible_pairings.empty:
+                raise ValueError("NO PAIRINGS FOUND!")
+            else:
+                random_choice = possible_pairings.sample(1)
+
+            batch_specs["paired_spectrogram"].append(random_choice["file_path"].iloc[0])
+        
+        return pd.DataFrame(batch_specs)
+
     def __getitem__(self, index):
         """
         Generate one batch of data.
         """
 
-        batch_df = self.pairings_df.iloc[index * self.batch_size:(index + 1) * self.batch_size]
+        # 1. Get BATCH_SIZE rows from the multiple_recordings_df
+        batch_segments = self.multiple_recordings_df.iloc[index * self.batch_size:(index + 1) * self.batch_size]
 
+        # 2. For each segment (row) in the batch, we assign it a
+        #       segment which is from a different recording of the same ship.
+        batch_df = self._assign_pairs(batch_segments)
+
+        # 3. Import both spectrograms
         return self.__get_data(batch_df)
-
-    def on_epoch_end(self):
-        """
-        At the end of every epoch, we recreate the pairs of recordings.
-        """
-        # Get new pairings
-        self.pairings_df = self.__make_pairs_different_recording(self.multiple_recordings_df)
-
-        if self.shuffle:
-            self.pairings_df = self.pairings_df.sample(frac=1).reset_index(drop=True)
-
-    def get_epoch_length(self):
-        return len(self.pairings_df)
 
 
 class N2NTrainGenerator(keras.utils.Sequence):
