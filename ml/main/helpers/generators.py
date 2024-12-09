@@ -253,6 +253,9 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         y_max = y.max(axis=(1, 2), keepdims=True)
         y = (y - y_min) / (y_max - y_min) # normalised
 
+        X = X.astype(np.float32)  
+        y = y.astype(np.float32)
+
         return X, y
 
     def __getitem__(self, index):
@@ -273,6 +276,9 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
 
         if self.shuffle:
             self.pairings_df = self.pairings_df.sample(frac=1).reset_index(drop=True)
+
+    def get_epoch_length(self):
+        return len(self.pairings_df)
 
 
 class N2NTrainGenerator(keras.utils.Sequence):
