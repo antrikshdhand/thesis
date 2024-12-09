@@ -3,6 +3,7 @@
 
 # Any saved keras models (due to GitHub size restrictions)
 *.keras
+*.pth
 
 bsd_data
 
