@@ -4,7 +4,7 @@
 # Any saved keras models (due to GitHub size restrictions)
 *.keras
 
-data
+bsd_data
 
 # TAKEN FROM GITHUB RECOMMENDED PYTHON GITIGNORE
 

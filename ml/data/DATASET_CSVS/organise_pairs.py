@@ -55,7 +55,6 @@ def make_pairs_different_recording(multiple_recordings_df: pd.DataFrame):
         "date_seg_2": []
     }
     used_files = set()
-    random.seed(42)
 
     for ship_name, ship_data in multiple_recordings_df.groupby("ship_name"):
         for _, row in ship_data.iterrows():
@@ -81,7 +80,7 @@ def make_pairs_different_recording(multiple_recordings_df: pd.DataFrame):
             used_files.update([row["file_path"], random_pair["file_path"]])
 
     pairings_df = pd.DataFrame(pairings)
-    pairings_df.to_csv("deepship_pairs_diff_recording.csv", index=False)
+    # pairings_df.to_csv("deepship_pairs_diff_recording.csv", index=False)
     return pairings_df
 
 def make_pairs_same_recording(all_files_df: pd.DataFrame):
@@ -98,7 +97,7 @@ def make_pairs_same_recording(all_files_df: pd.DataFrame):
             pairs.append((file_paths[i], file_paths[i + 1]))
 
     pairs_df = pd.DataFrame(pairs, columns=['input', 'label'])
-    pairs_df.to_csv('deepship_pairs_same_recording.csv', index=False)
+    # pairs_df.to_csv('deepship_pairs_same_recording.csv', index=False)
     return pairs_df
 
 def main(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
@@ -108,14 +107,19 @@ def main(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
     :param path_to_root: Root directory containing the dataset.
     :param ext: File extension of the recordings.
     """
+    random.seed(42)
+
     all_files_df, ships = get_dataset_info(path_to_root, ext)
 
     # Filter ships which have multiple recordings
     ships_multiple_recordings = {k: v for k, v in ships.items() if len(v) > 1}
     multiple_recordings_df = all_files_df[all_files_df["ship_name"].isin(ships_multiple_recordings)]
 
-    ships_with_multiple_recordings = multiple_recordings_df[["ship_name", "class"]].drop_duplicates()
-    ships_with_multiple_recordings.to_csv("image_segmentation/ships_with_multiple_recordings.csv", index=False)
+    print("Multiple_recordings_df")
+    print(multiple_recordings_df)
+
+    # ships_with_multiple_recordings = multiple_recordings_df[["ship_name", "class"]].drop_duplicates()
+    # ships_with_multiple_recordings.to_csv("image_segmentation/data/ships_with_multiple_recordings.csv", index=False)
 
     # Create pairs from different recordings
     diff_recordings_pairs = make_pairs_different_recording(multiple_recordings_df)
@@ -124,9 +128,10 @@ def main(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
     same_recording_pairs = make_pairs_same_recording(all_files_df)
 
     print("Pairs from different recordings:")
-    print(diff_recordings_pairs.head())
-    print("\nPairs from the same recording:")
-    print(same_recording_pairs.head())
+    print(diff_recordings_pairs.shape)
+    print("Pairs from the same recording:")
+    print(same_recording_pairs.shape)
+    print()
 
 if __name__ == "__main__":
-    main(path_to_root="deepship_baseline_mat", ext="mat")
+    main(path_to_root="deepship_baseline_unnorm_mat", ext="mat")

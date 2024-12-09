@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 from typing import Literal
+import os
 
 def rename_folds(fold_definitions: pd.DataFrame, new_path_to_root: str, 
                   unix: bool, ext: Literal['csv', 'npz', 'mat'],
@@ -225,3 +226,40 @@ def generate_kth_fold(fold_dfs: list[pd.DataFrame], test_idx: int, val_idx=None)
         return train_df, val_df, test_df
     else:
         return train_df, test_df
+
+
+def get_dataset_info(path_to_root: str, ext: Literal['csv', 'npz', 'mat']):
+    """
+    Collects metadata for each file in the dataset directory.
+
+    :param path_to_root: Root directory containing the dataset.
+    :param ext: File extension to filter (e.g., 'mat', 'csv', 'npz').
+    :return: 
+        - A pd.DataFrame with columns (ship_name, file_path, date, seg).
+        - A dictionary tracking the number of unique recordings per vessel.
+    """
+    ships = {} # Dictionary of {ship_name: {recording_date: num_segments}}
+    all_files = []
+
+    for class_folder in os.listdir(path_to_root):
+        class_path = os.path.join(path_to_root, class_folder)
+        if not os.path.isdir(class_path):
+            continue
+
+        for file_name in os.listdir(class_path):
+            if not file_name.endswith(ext):
+                continue
+
+            ship_name, _, date_seg_ext = file_name.split('-')
+            date, seg_ext = date_seg_ext.split('_')
+            seg = int(seg_ext.split('.')[0].lstrip('seg'))
+
+            if ship_name not in ships:
+                ships[ship_name] = {}
+            ships[ship_name][date] = seg
+            
+            file_path = os.path.join(class_path, file_name)
+            all_files.append((ship_name, class_folder, file_path, date, seg))
+
+    all_files_df = pd.DataFrame(all_files, columns=['ship_name', 'class', 'file_path', 'date', 'seg'])
+    return all_files_df, ships 
