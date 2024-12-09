@@ -108,7 +108,7 @@ def _psnr_loss_curves_from_dict(history_dict: dict, together=False, ssim=False):
             fig.tight_layout(pad=1.5)
             return fig
         else:
-            fig, (ax_psnr, ax_loss) = plt.subplots(2, 1, figsize=(7, 10))
+            fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(11, 5)) # (10, 5) is pretty good
             ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict) 
             ax_loss = _loss_plot(ax_loss, epochs, history_dict)
             fig.tight_layout()
@@ -359,8 +359,9 @@ def get_acc_loss_curves_by_fold(histories: list[keras.callbacks.History], overla
 
     return fig
 
+############ DENOISING ############
 
-def image_to_ground_truth_patch(image_path, patch_coords=None, patch_size=192,
+def _image_to_ground_truth_patch(image_path, patch_coords=None, patch_size=192,
                                 zero_one_normalisation=True, greyscale=True):
 
     if greyscale:
@@ -389,8 +390,7 @@ def image_to_ground_truth_patch(image_path, patch_coords=None, patch_size=192,
 
     return original_image, ground_truth_patch, top_left_coords
 
-
-def plot_ground_truth_with_patch(original_image, top_left_coords, patch_size):
+def _plot_ground_truth_with_patch(original_image, top_left_coords, patch_size):
     ground_truth_fig, ax = plt.subplots()
 
     ax.imshow(original_image, cmap='gray')
@@ -405,100 +405,212 @@ def plot_ground_truth_with_patch(original_image, top_left_coords, patch_size):
 
     return ground_truth_fig
 
-def plot_patches(ground_truth_patch, noisy_patch, denoised_patch):
-    patches_fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+def _plot_patches(ground_truth_patches, noisy_patches, denoised_patches, titles=None):
+    """
+    Function to plot a ground truth patch, noisy patch, and multiple denoised patches.
 
-    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
-    axes[0].axis("off")
-    axes[0].set_title("Ground Truth Patch\n", fontdict={'fontsize':16})
+    Args:
+    - ground_truth_patch (ndarray): The ground truth image patch.
+    - noisy_patch (ndarray): The noisy image patch.
+    - denoised_patches (list of ndarray): List of denoised image patches.
+    - titles (list of str, optional): List of titles for each plot. Defaults to None.
+    """
+    num_denoised = len(denoised_patches)
 
-    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
-    axes[1].axis("off")
-    axes[1].set_title("Noisy Patch\n", fontdict={'fontsize':16})
+    fontsize = 16
+    if num_denoised <= 2:
+        # Create a figure with 1 row and (2 + num_denoised) columns
+        fig, axes = plt.subplots(1, 2 + num_denoised, figsize=(5 * (num_denoised + 1), 5))
 
-    axes[2].imshow(denoised_patch.squeeze(), cmap='gray')
-    axes[2].axis("off")
-    axes[2].set_title("Denoised Patch\n", fontdict={'fontsize':16})
+        # Plot ground truth patch
+        axes[0].imshow(ground_truth_patches.squeeze(), cmap='gray')
+        axes[0].axis("off")
+        axes[0].set_title("Ground Truth Patch\n", fontdict={'fontsize': fontsize})
 
-    patches_fig.tight_layout()
+        # Plot noisy patch
+        axes[1].imshow(noisy_patches.squeeze(), cmap='gray')
+        axes[1].axis("off")
+        axes[1].set_title("Noisy Patch\n", fontdict={'fontsize': fontsize})
 
-    return patches_fig
+        # Plot denoised patches with custom titles
+        for i in range(num_denoised):
+            axes[2 + i].imshow(denoised_patches[i].squeeze(), cmap='gray')
+            axes[2 + i].axis("off")
+            if titles:
+                axes[2 + i].set_title(titles[i] + '\n', fontdict={'fontsize': fontsize})
+            else:
+                axes[2 + i].set_title(f"Denoised Patch {i + 1}\n", fontdict={'fontsize': fontsize})
+    else:
+        # Create a figure with (2 + num_denoised) rows and 2 columns (labels, images)
+        fig, axes = plt.subplots(2 + num_denoised, 2, figsize=(10, 5 * (num_denoised + 1)))
 
-def test_model_on_image(image_path, model, patch_coords=None, patch_size=192, 
-                        zero_one_normalisation=True, greyscale=True,
-                        stddev=None):
-    original_image, ground_truth_patch, top_left_coords = image_to_ground_truth_patch(
-        image_path, patch_coords, patch_size, zero_one_normalisation, greyscale
-    )
-    noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
-    
+        for i in range(axes.shape[0]):
+            for j in range(axes.shape[1]):
+                axes[i, j].axis("off")
+
+        # First two rows are ground truth and noisy
+        axes[0, 1].imshow(ground_truth_patches.squeeze(), cmap='gray')
+        axes[1, 1].imshow(noisy_patches.squeeze(), cmap='gray')
+
+        axes[0, 0].annotate("Ground Truth Patch", xy=(0.5, 0.5), xycoords='axes fraction', ha='center', va='center', fontsize=fontsize)
+        axes[1, 0].annotate("Noisy Patch", xy=(0.5, 0.5), xycoords='axes fraction', ha='center', va='center', fontsize=fontsize)
+        
+        # The remaining rows are denoised
+        for i in range(num_denoised):
+            if titles:
+                axes[2 + i, 0].text(0.5, 0.5, titles[i], ha='center', va='center', fontsize=fontsize)
+            else:
+                axes[2 + i, 0].text(0.5, 0.5, "Denoised Patch {i + 1}", ha='center', va='center', fontsize=fontsize)
+
+        for i in range(num_denoised):
+            axes[2 + i, 1].imshow(denoised_patches[i].squeeze(), cmap='gray')
+
+    fig.tight_layout()
+
+    return fig
+
+def _get_denoised_patch(noisy_patch, model):
     denoised_patch = model.predict(np.expand_dims(noisy_patch, axis=0))
     denoised_patch = np.clip(denoised_patch, 0, 1) * 255.0
     denoised_patch = denoised_patch.astype(np.uint8)
 
-    ground_truth_fig = plot_ground_truth_with_patch(
+    return denoised_patch
+
+def test_model_on_image(image_path, model, patch_coords=None, patch_size=192, 
+                        zero_one_normalisation=True, greyscale=True,
+                        stddev=None):
+    # Get ground truth patch
+    original_image, ground_truth_patch, top_left_coords = _image_to_ground_truth_patch(
+        image_path, patch_coords, patch_size, zero_one_normalisation, greyscale
+    )
+
+    # Get noisy patch
+    noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
+    
+    # Get denoised patch for the given model
+    denoised_patch = _get_denoised_patch(noisy_patch, model)
+
+    ground_truth_fig = _plot_ground_truth_with_patch(
         original_image, top_left_coords=top_left_coords, patch_size=patch_size
     )
 
-    patches_fig = plot_patches(ground_truth_patch, noisy_patch, denoised_patch)
+    patches_fig = _plot_patches(ground_truth_patch, noisy_patch, denoised_patch)
 
     return ground_truth_fig, patches_fig
 
-
-def compare_two_models_denoising(
-        image_path, model1, model2, patch_coords=None,
+def compare_models_on_image(
+        image_path, models, patch_coords=None,
         patch_size=192, zero_one_normalisation=True,
-        greyscale=True, stddev=None, model1_name=None, model2_name=None):
+        greyscale=True, stddev=None, titles=None):
 
-    original_image, ground_truth_patch, top_left_coords = image_to_ground_truth_patch(
+    # Get ground truth patch
+    original_image, ground_truth_patch, top_left_coords = _image_to_ground_truth_patch(
         image_path, patch_coords, patch_size, zero_one_normalisation, greyscale
     )
     
+    # Get noisy patch
     noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
 
-    denoised_patch_1 = model1.predict(np.expand_dims(noisy_patch, axis=0))
-    denoised_patch_1 = np.clip(denoised_patch_1, 0, 1) * 255.0
-    denoised_patch_1 = denoised_patch_1.astype(np.uint8)
-    
-    denoised_patch_2 = model2.predict(np.expand_dims(noisy_patch, axis=0))
-    denoised_patch_2 = np.clip(denoised_patch_2, 0, 1) * 255.0
-    denoised_patch_2 = denoised_patch_2.astype(np.uint8)
+    # Get denoised patches for each model
+    denoised_patches = []
+    for model in models:
+        denoised_patches.append(_get_denoised_patch(noisy_patch, model))
 
     # Plot the original image with the patch rectangle
-    ground_truth_fig = plot_ground_truth_with_patch(
+    ground_truth_fig = _plot_ground_truth_with_patch(
         original_image, top_left_coords=top_left_coords, patch_size=patch_size
     )
 
-    # Plot the ground truth patch, noisy patch, and both denoised patches
-    patches_fig, axes = plt.subplots(1, 4, figsize=(14, 5))
-
-    fontsize = 17
-
-    axes[0].imshow(ground_truth_patch.squeeze(), cmap='gray')
-    axes[0].axis("off")
-    axes[0].set_title("Ground Truth Patch\n", fontdict={'fontsize':fontsize})
-
-    axes[1].imshow(noisy_patch.squeeze(), cmap='gray')
-    axes[1].axis("off")
-    axes[1].set_title("Noisy Patch\n", fontdict={'fontsize':fontsize})
-
-    # Plot Denoised Patch from Model 1
-    axes[2].imshow(denoised_patch_1.squeeze(), cmap='gray')
-    axes[2].axis("off")
-    if model1_name is None:
-        axes[2].set_title("Denoised Patch (Model 1)\n", fontdict={'fontsize':fontsize})
-    else:
-        axes[2].set_title(f"Denoised Patch ({model1_name})\n", fontdict={'fontsize':fontsize})
-
-    # Plot Denoised Patch from Model 2
-    axes[3].imshow(denoised_patch_2.squeeze(), cmap='gray')
-    axes[3].axis("off")
-    if model2_name is None:
-        axes[3].set_title("Denoised Patch (Model 2)\n", fontdict={'fontsize':fontsize})
-    else:
-        axes[3].set_title(f"Denoised Patch ({model2_name})\n", fontdict={'fontsize':fontsize})
-
-    patches_fig.tight_layout(pad=0.2)
-    # patches_fig.subplots_adjust(top=0.85)
+    patches_fig = _plot_patches(ground_truth_patch, noisy_patch, denoised_patches, titles) 
 
     return ground_truth_fig, patches_fig
+
+
+def _plot_patches_multiple(ground_truth_patches, noisy_patches, denoised_patches, 
+                           titles=None):
+    # Number of images
+    num_images = len(ground_truth_patches)
+    
+    # Determine the number of denoised patches per image (same for each image)
+    num_denoised = len(denoised_patches[0])
+    
+    fontsize = 16
+    
+    # Create a figure with (num_denoised + 2) rows (labels + images)
+    fig, axes = plt.subplots(num_denoised + 2, num_images + 1, figsize=(3.6 * (num_images), 4 * (num_denoised)))
+
+    # Loop through the axes to remove axis ticks
+    for i in range(num_denoised + 2):
+        for j in range(num_images + 1):
+            axes[i, j].axis("off")
+
+    # Add labels in the first column
+    axes[0, 0].text(0.5, 0.5, "Ground Truth Patch", ha='center', va='center', fontsize=fontsize, linespacing=2)
+    axes[1, 0].text(0.5, 0.5, "Noisy Patch", ha='center', va='center', fontsize=fontsize, linespacing=2)
+   
+    for i in range(num_denoised):
+        label = titles[i] if titles else f"Denoised Patch {i + 1}"
+        axes[2 + i, 0].text(0.5, 0.5, label, ha='center', va='center', fontsize=fontsize, linespacing=2)
+
+    # Plot the patches for each image
+    for i in range(num_images):
+        # Plot ground truth, noisy, and denoised patches for each image
+        axes[0, i + 1].imshow(ground_truth_patches[i].squeeze(), cmap='gray')
+        axes[1, i + 1].imshow(noisy_patches[i].squeeze(), cmap='gray')
+        
+        for j in range(num_denoised):
+            axes[2 + j, i + 1].imshow(denoised_patches[i][j].squeeze(), cmap='gray')
+
+    fig.tight_layout(pad=0)
+
+    return fig
+
+def compare_models_on_multiple_images(
+        image_paths, models, patch_coords=None,
+        patch_size=192, zero_one_normalisation=True,
+        greyscale=True, stddev=None, titles=None):
+    """
+    Function to compare multiple models on multiple images.
+    
+    Args:
+    - image_paths (list of str): List of image paths.
+    - models (list of keras.Model): List of models to compare.
+    - patch_coords (list of tuples): List of tuples representing the patches for each image.
+    - patch_size (int): Size of the patch.
+    - zero_one_normalisation (bool): Whether to normalize to [0, 1].
+    - greyscale (bool): Whether to use greyscale images.
+    - stddev (float, optional): Standard deviation for Gaussian noise.
+    - titles (list of str, optional): Titles for each denoised patch.
+    """
+    ground_truth_patches = []
+    noisy_patches = []
+    denoised_patches = [[] for _ in range(len(image_paths))]
+
+    # Process each image
+    for i, image_path in enumerate(image_paths):
+        # Get ground truth patch
+        original_image, ground_truth_patch, top_left_coords = _image_to_ground_truth_patch(
+            image_path, patch_coords[i], patch_size, zero_one_normalisation, greyscale
+        )
+        
+        # Get noisy patch
+        noisy_patch = noise_models.gaussian_noise(ground_truth_patch, stddev=stddev) 
+
+        # Get denoised patches for each model
+        for model in models:
+            denoised_patch = _get_denoised_patch(noisy_patch, model)
+            denoised_patches[i].append(denoised_patch)
+
+        # Add the ground truth and noisy patches to the respective lists
+        ground_truth_patches.append(ground_truth_patch)
+        noisy_patches.append(noisy_patch)
+
+    # Plot the images with their patches
+    patches_fig = _plot_patches_multiple(
+        ground_truth_patches, 
+        noisy_patches, 
+        denoised_patches, 
+        titles
+    )
+
+    return patches_fig
