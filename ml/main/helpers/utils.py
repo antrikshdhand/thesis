@@ -23,6 +23,9 @@ def calculate_metrics(evals: list):
 def psnr(y_true, y_pred):
     return tf.image.psnr(y_true, y_pred, max_val=1.0)
 
+def ssim(y_true, y_pred):
+  return tf.image.ssim(y_true, y_pred, 1.0)
+
 def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
     """
     Plots the training history for specified metrics over epochs.
@@ -60,71 +63,84 @@ def get_history_curve(history: keras.callbacks.History, metrics: list[str]):
 
     return fig
 
-def _psnr_loss_curves_from_dict(history_dict: dict, together=False):
+
+def _ssim_plot(ax, epochs, history_dict):
+    ax.plot(epochs, history_dict['ssim'], label='SSIM', marker='o')
+    ax.plot(epochs, history_dict['val_ssim'], label='Validation SSIM', marker='s')
+    ax.set_title('SSIM over epochs')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('SSIM')
+    ax.legend()
+    ax.grid(True)
+    return ax
+
+def _loss_plot(ax, epochs, history_dict):
+    ax.plot(epochs, history_dict['loss'], label='Loss', marker='o')
+    ax.plot(epochs, history_dict['val_loss'], label='Validation loss', marker='s')
+    ax.set_title('Loss over epochs')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Loss')
+    ax.legend()
+    ax.grid(True)
+    return ax
+
+def _psnr_plot(ax, epochs, history_dict):
+    ax.plot(epochs, history_dict['psnr'], label='PSNR', marker='o')
+    ax.plot(epochs, history_dict['val_psnr'], label='Validation PSNR', marker='s')
+    ax.set_title('PSNR over epochs')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('PSNR (dB)')
+    ax.legend()
+    ax.grid(True)
+    return ax
+
+def _psnr_loss_curves_from_dict(history_dict: dict, together=False, ssim=False):
     # Extract epochs
     num_epochs = len(history_dict['psnr'])
     epochs = np.arange(1, num_epochs + 1, dtype=int)
 
     if together:
-        # Create a single figure with 2 subplots side by side
-        fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(14, 5))
-        
-        # PSNR Plot
-        ax_psnr.plot(epochs, history_dict['psnr'], label='PSNR', marker='o')
-        ax_psnr.plot(epochs, history_dict['val_psnr'], label='Validation PSNR', marker='s')
-        ax_psnr.set_title('PSNR over epochs')
-        ax_psnr.set_xlabel('Epochs')
-        ax_psnr.set_ylabel('PSNR (dB)')
-        ax_psnr.legend()
-        ax_psnr.grid(True)
-
-        # Loss Plot
-        ax_loss.plot(epochs, history_dict['loss'], label='Loss', marker='o')
-        ax_loss.plot(epochs, history_dict['val_loss'], label='Validation loss', marker='s')
-        ax_loss.set_title('Loss over epochs')
-        ax_loss.set_xlabel('Epochs')
-        ax_loss.set_ylabel('Loss')
-        ax_loss.legend()
-        ax_loss.grid(True)
-
-        fig.tight_layout()
-
-        return fig
-    
+        if ssim:
+            fig, (ax_psnr, ax_loss, ax_ssim) = plt.subplots(3, 1, figsize=(6, 11))
+            ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict) 
+            ax_loss = _loss_plot(ax_loss, epochs, history_dict)
+            ax_ssim = _ssim_plot(ax_ssim, epochs, history_dict)
+            fig.tight_layout(pad=1.5)
+            return fig
+        else:
+            fig, (ax_psnr, ax_loss) = plt.subplots(2, 1, figsize=(7, 10))
+            ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict) 
+            ax_loss = _loss_plot(ax_loss, epochs, history_dict)
+            fig.tight_layout()
+            return fig
     else:
-        # Separate figures for PSNR and Loss
+        # PSNR PLOT
         fig_psnr, ax_psnr = plt.subplots()
-        ax_psnr.plot(epochs, history_dict['psnr'], label='PSNR', marker='o')
-        ax_psnr.plot(epochs, history_dict['val_psnr'], label='Validation PSNR', marker='s')
-        ax_psnr.set_title('PSNR over epochs')
-        ax_psnr.set_xlabel('Epochs')
-        ax_psnr.set_ylabel('PSNR (dB)')
-        ax_psnr.legend()
-        ax_psnr.grid(True)
+        ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict)
 
-        # Loss Plot
+        # LOSS PLOT 
         fig_loss, ax_loss = plt.subplots()
-        ax_loss.plot(epochs, history_dict['loss'], label='Loss', marker='o')
-        ax_loss.plot(epochs, history_dict['val_loss'], label='Validation loss', marker='s')
-        ax_loss.set_title('Loss over epochs')
-        ax_loss.set_xlabel('Epochs')
-        ax_loss.set_ylabel('Loss')
-        ax_loss.legend()
-        ax_loss.grid(True)
+        ax_loss = _loss_plot(ax_loss, epochs, history_dict)
 
-        return fig_psnr, fig_loss 
+        # SSIM PLOT 
+        if ssim:
+            fig_ssim, ax_ssim = plt.subplots()
+            ax_ssim = _ssim_plot(ax_ssim, epochs, history_dict)
+            return fig_psnr, fig_loss, fig_ssim
 
-def get_psnr_and_loss_curves(history: Union[keras.callbacks.History, str], together=False):
+        return fig_psnr, fig_loss
+
+def get_psnr_and_loss_curves(history: Union[keras.callbacks.History, str], together=False, ssim=False):
     """
     :param history: Either the output of model.fit() or a filepath to a training log.
     :return: If `together=True`, returns one figure. Else, returns (fig_psnr, fig_loss)
     """
     if type(history) == keras.callbacks.History:
-        return _psnr_loss_curves_from_dict(history.history, together)
+        return _psnr_loss_curves_from_dict(history.history, together, ssim)
     elif type(history) == str:
         df = pd.read_csv(history, index_col="epoch")
         history_dict = df.to_dict(orient='list')
-        return _psnr_loss_curves_from_dict(history_dict, together)
+        return _psnr_loss_curves_from_dict(history_dict, together, ssim)
 
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
