@@ -6,22 +6,22 @@ from keras.models import Model
 def get_paths(x, filters):
     path1 = Conv2D(filters, kernel_size=(1, 1), padding="same")(x) 
     path1 = BatchNormalization()(path1)
-    path1 = LeakyReLU()(path1) # Original paper used ReLU
+    path1 = LeakyReLU(alpha=0.1)(path1) # Original paper used ReLU
     # path1 = ReLU()(path1)
 
     path2 = Conv2D(filters, kernel_size=(3, 3), padding="same")(x)
     path2 = BatchNormalization()(path2)
-    path2 = LeakyReLU()(path2) 
+    path2 = LeakyReLU(alpha=0.1)(path2) 
     # path2 = ReLU()(path2)
 
     path3 = Conv2D(filters, kernel_size=(5, 5), padding="same")(x)
     path3 = BatchNormalization()(path3)
-    path3 = LeakyReLU()(path3) 
+    path3 = LeakyReLU(alpha=0.1)(path3) 
     # path3 = ReLU()(path3)
 
     path4 = Conv2D(filters, kernel_size=(7, 7), padding="same")(x)
     path4 = BatchNormalization()(path4)
-    path4 = LeakyReLU()(path4) 
+    path4 = LeakyReLU(alpha=0.1)(path4) 
     # path4 = ReLU()(path4)
 
     return path1, path2, path3, path4
