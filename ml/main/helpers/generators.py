@@ -159,8 +159,8 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         """
         Initialise the generator.
 
-        :param multiple_recordings_df: A dataframe containing all segments whose 
-            ships have multiple recordings.
+        :param multiple_recordings_df: A dataframe containing info on segments 
+            whose ships have multiple recordings.
         :param ext: File extension for spectrogram files ('mat', 'csv', or 'npz').
         :param mat_var_name: Variable name in .mat files if applicable.
         :param batch_size: Size of each batch.
@@ -173,8 +173,27 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.conv_channel = conv_channel
+
+        # Precompute the ship-date pairings for faster lookup
+        self.pairings_dict = self._precompute_pairings()
         
         super().__init__(**kwargs)
+
+    def _precompute_pairings(self):
+        """
+        Precompute a dictionary that maps each ship to all possible pairings (based on date).
+        This avoids repeatedly filtering the DataFrame in each batch.
+        """
+        # ship_name: {date: [file_path]}
+        pairings_dict = {}
+        for _, row in self.multiple_recordings_df.iterrows():
+            ship_name, date = row['ship_name'], row['date']
+            if ship_name not in pairings_dict:
+                pairings_dict[ship_name] = {}
+            if date not in pairings_dict[ship_name]:
+                pairings_dict[ship_name][date] = []
+            pairings_dict[ship_name][date].append(row['file_path'])
+        return pairings_dict
 
     def __len__(self):
         """
@@ -219,11 +238,14 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         return X, y
 
     def _get_possible_pairings(self, ship_name, date):
-        # Any segment which has the same ship name but NOT the same date is valid
-        return self.multiple_recordings_df[
-            (self.multiple_recordings_df["ship_name"] == ship_name) & 
-            (self.multiple_recordings_df["date"] != date)
-        ]
+        """
+        Return possible pairings from the precomputed pairings dictionary.
+        """
+        possible_pairings = []
+        for other_date, file_paths in self.pairings_dict.get(ship_name, {}).items():
+            if other_date != date:
+                possible_pairings.extend(file_paths)
+        return possible_pairings
 
     def _assign_pairs(self, batch_segments):
         batch_specs = {
@@ -233,12 +255,10 @@ class N2NDeepShipGenerator(keras.utils.Sequence):
         for _, row in batch_segments.iterrows():
             batch_specs["original_spectrogram"].append(row["file_path"])
             possible_pairings = self._get_possible_pairings(row["ship_name"], row["date"])
-            if possible_pairings.empty:
-                raise ValueError("NO PAIRINGS FOUND!")
-            else:
-                random_choice = possible_pairings.sample(1)
-
-            batch_specs["paired_spectrogram"].append(random_choice["file_path"].iloc[0])
+            if not possible_pairings:
+                raise ValueError(f"No pairings found for ship {row['ship_name']} on date {row['date']}")
+            random_choice = np.random.choice(possible_pairings)
+            batch_specs["paired_spectrogram"].append(random_choice)
         
         return pd.DataFrame(batch_specs)
 

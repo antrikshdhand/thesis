@@ -94,53 +94,86 @@ def _psnr_plot(ax, epochs, history_dict):
     ax.grid(True)
     return ax
 
-def _psnr_loss_curves_from_dict(history_dict: dict, together=False, ssim=False):
-    # Extract epochs
-    num_epochs = len(history_dict['psnr'])
+def _psnr_loss_curves_from_dict(history_dict: dict, together=False, plots=['psnr', 'loss', 'ssim']):
+    # Find the first valid key in history_dict to determine the number of epochs
+    first_key = next((key for key in plots if key in history_dict), None)
+    if first_key is None:
+        raise ValueError("You can only plot a metric that was used in the model!")
+    num_epochs = len(history_dict[first_key])
     epochs = np.arange(1, num_epochs + 1, dtype=int)
 
     if together:
-        if ssim:
+        if len(plots) == 3:
             fig, (ax_psnr, ax_loss, ax_ssim) = plt.subplots(3, 1, figsize=(6, 11))
             ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict) 
             ax_loss = _loss_plot(ax_loss, epochs, history_dict)
             ax_ssim = _ssim_plot(ax_ssim, epochs, history_dict)
             fig.tight_layout(pad=1.5)
             return fig
-        else:
-            fig, (ax_psnr, ax_loss) = plt.subplots(1, 2, figsize=(11, 5)) # (10, 5) is pretty good
-            ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict) 
-            ax_loss = _loss_plot(ax_loss, epochs, history_dict)
+        elif len(plots) == 2:
+            fig, (ax_1, ax_2) = plt.subplots(1, 2, figsize=(11, 5)) # (10, 5) is pretty good
+            if 'psnr' in plots:
+                ax_1 = _psnr_plot(ax_1, epochs, history_dict) 
+                if 'loss' in plots:
+                    ax_2 = _loss_plot(ax_2, epochs, history_dict)
+                else:
+                    ax_2 = _ssim_plot(ax_2, epochs, history_dict)
+            else:
+                ax_1 = _loss_plot(ax_1, epochs, history_dict)
+                ax_2 = _ssim_plot(ax_2, epochs, history_dict)
+            
             fig.tight_layout()
             return fig
     else:
-        # PSNR PLOT
-        fig_psnr, ax_psnr = plt.subplots()
-        ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict)
+        created_figures = []
+        
+        if 'psnr' in plots:
+            fig_psnr, ax_psnr = plt.subplots()
+            ax_psnr = _psnr_plot(ax_psnr, epochs, history_dict)
+            created_figures.append(fig_psnr)
 
-        # LOSS PLOT 
-        fig_loss, ax_loss = plt.subplots()
-        ax_loss = _loss_plot(ax_loss, epochs, history_dict)
+        if 'loss' in plots:
+            fig_loss, ax_loss = plt.subplots()
+            ax_loss = _loss_plot(ax_loss, epochs, history_dict)
+            created_figures.append(fig_loss)
 
-        # SSIM PLOT 
-        if ssim:
+        if 'ssim' in plots:
             fig_ssim, ax_ssim = plt.subplots()
             ax_ssim = _ssim_plot(ax_ssim, epochs, history_dict)
-            return fig_psnr, fig_loss, fig_ssim
+            created_figures.append(fig_ssim)
 
-        return fig_psnr, fig_loss
+        return tuple(created_figures)
 
-def get_psnr_and_loss_curves(history: Union[keras.callbacks.History, str], together=False, ssim=False):
+def get_psnr_loss_ssim_curves(history: Union[keras.callbacks.History, str], together=False, plots=['psnr', 'loss', 'ssim']):
     """
-    :param history: Either the output of model.fit() or a filepath to a training log.
-    :return: If `together=True`, returns one figure. Else, returns (fig_psnr, fig_loss)
+    Generate and return PSNR, Loss, and SSIM curves for model training.
+
+    Args:
+    - history (Union[keras.callbacks.History, str]): 
+        If a `keras.callbacks.History` object, it should contain the training metrics 
+        (e.g., 'psnr', 'loss', 'ssim'). If a string, it should be a filepath to a CSV 
+        file containing training metrics with columns for each metric (e.g., 'psnr', 'loss', 'ssim') 
+        indexed by epochs.
+    - together (bool, optional): 
+        If `True`, returns one figure with all requested plots combined. If `False`, 
+        returns individual figures for PSNR, Loss, and SSIM. Default is `False`.
+    - plots (list, optional): 
+        A list of plots to generate. Possible values are ['psnr', 'loss', 'ssim']. 
+        Default is `['psnr', 'loss', 'ssim']`.
+
+    Returns:
+    - If `together=True`, returns a single figure containing the requested plots.
+    - If `together=False`, returns a tuple of individual figures in the order PSNR, Loss, and SSIM.
+
+    Note:
+    - The function either takes a `keras.callbacks.History` object or a file path to a CSV containing the training metrics.
     """
     if type(history) == keras.callbacks.History:
-        return _psnr_loss_curves_from_dict(history.history, together, ssim)
+        return _psnr_loss_curves_from_dict(history.history, together, plots)
     elif type(history) == str:
         df = pd.read_csv(history, index_col="epoch")
         history_dict = df.to_dict(orient='list')
-        return _psnr_loss_curves_from_dict(history_dict, together, ssim)
+        return _psnr_loss_curves_from_dict(history_dict, together, plots)
 
 
 def get_acc_loss_curves_by_epoch(histories: list[keras.callbacks.History], overlay=False):
