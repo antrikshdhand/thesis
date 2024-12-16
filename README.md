@@ -1,13 +1,13 @@
 <br />
 <div align="center">
-    <img src="img/emblem.png" alt="Logo" width="150">
+    <img src="docs/emblem.png" alt="Logo" width="150">
     <h3 align="center">Experiments in preprocessing techniques for underwater acoustic target recognition</h3>
     <p align="center">
         Official repository for my undergraduate thesis
         <br/>
         Supervised by Daniel La Mela (Thales) and Dr. Dong Yuan (USYD)
         <br/>
-        <a href="">Dissertation</a>
+        <a href="docs/thesis.pdf">Dissertation</a>
         ·
         <a href="">Presentation</a>
     </p>
