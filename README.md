@@ -1,6 +1,6 @@
 <br />
 <div align="center">
-    <img src="img/emblem.png" alt="Logo" width="125">
+    <img src="img/emblem.png" alt="Logo" width="150">
     <h3 align="center">Experiments in preprocessing techniques for underwater acoustic target recognition</h3>
     <p align="center">
         Official repository for my undergraduate thesis
