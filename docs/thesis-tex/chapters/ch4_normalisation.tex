@@ -1,0 +1,196 @@
+\chapter{Normalisation}
+
+% Preprocessing techniques are essential for enhancing signal clarity and improving the accuracy of subsequent analyses. These techniques aim to mitigate unwanted artefacts and noise that can obscure meaningful information within the signal. Among the numerous preprocessing methods developed, here we focus on two specific techniques: detrending and denoising. 
+
+% \begin{researchquestion}
+% How effective are preprocessing steps such as normalisation, detrending, and denoising in improving the clarity of underwater acoustic signal recordings?
+% \end{researchquestion}
+
+Normalisation is considered a fundamental preprocessing step when using spectrograms for machine learning tasks. Its primary purpose is to standardise input data in order to reduce variability in amplitude scales and improve model training stability. By ensuring that all inputs share similar statistical properties, normalisation enhances convergence and reduces the risk of numerical instability. This chapter aims to quantify the benefits of normalisation for use with underwater acoustic datasets such as DeepShip.
+
+\section{Introduction}
+
+The primary motivation for normalisation is to standardise the input data to avoid biases caused by differences in feature magnitudes. Take the following example as illustration: consider two input features $x_1$ and $x_2$ with ranges $x_1 \in [0, 1000]$ and $x_2 \in [0, 1]$ and corresponding weights  $w_1$ and $w_2$, $w_i \in [-1, 1]$. Now, the activation function at the first layer in the neural network will receive input $\bm{w}^T \bm{x} = w_1x_1 + w_2x_2$. Without normalisation, $x_1$ would dominate the model's computations, making it difficult for the network to effectively learn from $x_2$. Normalisation mitigates this by rescaling both features to a comparable range \cite{gunes_answer_2020}.
+
+This is already important for RGB images in computer vision applications, where pixel intensity values vary between 0 and 255. Power spectrograms, however, differ fundamentally from images in that their axes (frequency and time) represent different domains, and their value ranges vary significantly due to the logarithmic transformation of power values. Hence, normalisation may play an even larger role when working with power spectrograms for machine learning tasks compared to plain images. Without an appropriate normalisation technique, the network may struggle to learn meaningful patterns from the spectrogram data.
+
+There are also several neural network-based motivations for normalisation of input features:
+\begin{itemize}
+    \item Stable gradient flow: Normalised inputs maintain consistent variance across layers, preventing issues such as vanishing or exploding gradients during backpropagation. This ensures that the network can propagate gradients effectively throughout all layers \cite{glorot_understanding_2010, wu_group_2018, pons_deep_2019}.
+    \item Reduced saturation: Neural networks often use activation functions like ReLU or tanh, which have flat regions where gradients are near zero. Normalisation keeps input values within the sensitive, non-saturated region of these functions, improving learning \cite{glorot_understanding_2010}.
+    \item Faster convergence: By rescaling inputs, normalisation simplifies the optimisation process, allowing gradient descent to converge more efficiently. This can lead to significant reductions in training time \cite{montavon_efficient_2012}.
+\end{itemize}
+
+In summary, normalisation ensures balanced feature contributions, stabilises gradient flow, prevents activation saturation, and accelerates convergence. It is especially important for power spectrograms given their unique axes and logarithmic value ranges.
+
+\section{Overview of normalisation techniques}
+
+Several normalisation strategies exist, each suited to different data characteristics and modelling requirements. For example, min-max normalisation rescales data to a fixed range, often [0, 1], by mapping the dataset's minimum and maximum values to these bounds. However, this chapter specifically focuses on \textit{standardisation techniques}, a subset of normalisation techniques which rescale data to have a mean of 0 and a standard deviation of 1. These methods are particularly effective for spectrograms with wide dynamic ranges and skewed distributions, as they ensure consistent scaling across the dataset.
+
+Standardisation approaches can be broadly categorised into two groups: global methods, which calculate statistics across the entire dataset, and local methods, which normalise each spectrogram or frequency bin individually. Local normalisation methods, such as those that compute $\mu$ and $\sigma$ for each spectrogram, offer adaptability to unique sample characteristics. However, they risk introducing inconsistencies into the dataset due to wide statistical variations between samples. Moreover, by overfitting to individual spectrogram features, local methods may obscure meaningful global patterns that span the dataset. Given these limitations, we excluded local approaches from our experiments in favour of global techniques, which enforce consistency and preserve cross-sample relationships.
+
+This section examines two widely used global standardisation methods: channel-based normalisation, which independently normalises each frequency bin, and global normalisation, which computes statistics across all time-frequency values in the dataset.
+
+\input{img/ch4/cube_comparison}
+
+\subsection{Channel-based normalisation}
+The channel-based normalisation approach (Figure~\ref{fig:channel-normalisation-cube}) calculates statistics independently for each frequency bin (or channel) across the entire dataset. For example, for a dataset containing $n$ spectrograms $S_i : i \in [1, n]$, each with dimensions $F \times T$, we would calculate the average and standard deviation of each frequency bin $f \in F$ across all spectrograms; that is:
+\begin{align}
+    \mu_f &= \frac{1}{nT} \sum_{i=1}^n \sum_{t=1}^T S_i(f, t) \\
+    \sigma_f &= \sqrt{\frac{1}{nT} \sum_{i=1}^n \sum_{t=1}^T \left(S_i(f, t) - \mu_f\right)^2}
+        % &= \sqrt{\frac{1}{nT} \sum_{i=1}^n \sum_{t=1}^T S_i(f, t)^2 - \mu_f^2}
+\end{align}
+Each value within a frequency bin is then normalised using these statistics:
+\begin{equation}
+    S(f,t) = \frac{S(f,t) - \mu_f}{\sigma_f}.
+\end{equation}
+This method treats each frequency bin as an independent channel, analogous to how RGB channels are normalised in image data. Channel-based normalisation is particularly effective when frequency bins exhibit distinct statistical distributions. For example, Ruffini et al. employed channel-normalised spectrograms derived from 14-channel electroencephalography (EEG) data to address such channel-specific variability \cite{ruffini_deep_2019}.
+
+\subsection{Global normalisation}
+The global normalisation method (Figure~\ref{fig:global-normalisation-cube}) computes the mean and standard deviation across all time-frequency values across all spectrograms of the dataset. That is, for a dataset containing $n$ spectrograms $S_i : i \in [1, n]$, each with dimensions $F \times T$:
+\begin{align}
+    \mu_\text{global} &= \frac{1}{nFT} \sum_{i=1}^n \sum_{f=1}^F \sum_{t=1}^T S_i(f, t)\\
+    \sigma_\text{global} &= \sqrt{\frac{1}{nFT} \sum_{i=1}^n \sum_{f=1}^F \sum_{t=1}^T \left(S_i(f, t) - \mu_\text{global}\right)^2}
+\end{align} 
+Each spectrogram $S$ is then normalised using these global statistics:
+\begin{equation}
+    S(f,t) = \frac{S(f,t) - \mu_{\text{global}}}{\sigma_{\text{global}}}
+\end{equation}
+By rescaling all spectrogram values to have a mean of 0 and a standard deviation of 1, global normalisation reduces variability and standardises the data. This can improve a model's ability to learn from the inputs, as highlighted by Kroenke in their review of normalisation techniques \cite{chris_kroenke_normalizing_2022}. For example, Primus and Widmer normalise their log-Mel spectrograms using global normalisation prior to feeding them into an \acrlong{ast} model \cite{primus_frequency-wise_2023}.
+
+\begin{figure}[htbp]
+    \centering
+    % Subfigure 1: Spectrogram Comparison
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/ch4/spectrogramComparison.pdf}
+        \caption{Comparison of original spectrogram with global-normalised and channel-normalised spectrograms.}
+        \label{fig:normalisation-spectrogram}
+    \end{subfigure}
+    
+    \vspace{1cm}
+    
+    % Subfigure 2: Histogram Comparison
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/ch4/histogramComparison.pdf}
+        \caption{Comparison of amplitude histograms for original, global-normalised, and channel-normalised spectrograms.}
+        \label{fig:normalisation-histogram}
+    \end{subfigure}
+    
+    \vspace{1cm}
+    
+    % Subfigure 3: Time Segment Comparison
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/ch4/timeSegmentComparison.pdf}
+        \caption{Comparison of a random time segment for original, global-normalised, and channel-normalised spectrograms.}
+        \label{fig:normalisation-time-segment}
+    \end{subfigure}
+
+    \caption{Visual comparison of normalisation methods.}
+    \label{fig:normalisation-combined}
+\end{figure}
+
+The comparison of original, global-normalised, and channel-normalised spectrograms, as shown in Figure~\ref{fig:normalisation-combined}, reveals minimal visual differences in the structural patterns across the three techniques. This outcome is expected, as the primary purpose of normalisation is not to alter the fundamental structure of the spectrogram but to rescale their amplitudes into a standardised range. The key difference in Figure~\ref{fig:normalisation-spectrogram} lies in the colour bar scaling: in the original spectrogram, amplitude values span a range of approximately $-30$ to 30 dB, whereas in the global and channel-normalised spectrograms, the values are rescaled to a narrower range, approximately $-3$ to 4 dB. This is further supported by Figure~\ref{fig:normalisation-time-segment} which highlights the rescaling of amplitudes for a single random time segment in each spectrogram. Additionally, the amplitude histograms in Figure~\ref{fig:normalisation-histogram} show that while the overall distribution shapes remain similar, the normalised spectrograms exhibit distributions centred around zero. This comparison highlights a key property of normalisation: the normalised spectrograms still retain the important information necessary for classification while standardising the data for greater gradient stability during machine learning tasks.
+
+\section{Experiments}
+
+To evaluate the impact of global and channel-based normalisation on the DeepShip dataset, we designed an experiment to compare the performance of our benchmark CNN-LSTM model across three scenarios: baseline (no normalisation), global normalisation, and channel-based normalisation. The objective was to isolate the influence of these normalisation methods on model accuracy.
+
+\subsection{Methodology}
+
+Normalisation was implemented as a two-pass operation in MATLAB. In the first pass, the required statistics for normalisation were computed:
+\begin{itemize}
+    \item For global normalisation, the mean and standard deviation were calculated across all time-frequency bins in the dataset.
+    \item For channel-based normalisation, these statistics were calculated separately for each frequency channel. 
+\end{itemize}
+
+In the second pass, these precomputed statistics were used to apply the respective normalisation transformations to each spectrogram. The spectrograms were then exported as \texttt{.mat} files to seperate directories.
+
+The benchmark CNN-LSTM model was trained on each type of spectrogram under identical conditions. The same 10-fold cross-validation split was used across all experiments to ensure a consistent and fair comparison. The same hyperparameters and training configuration was used for all experiments, as outlined in Table~\ref{tab:cnn-lstm-final-params} and Section~\ref{subsec:training-configuration}. Model performance was evaluated using accuracy as the primary metric, and training and validation loss curves were recorded to analyse convergence trends qualitatively.
+
+To ensure reproducibility and consistency, all experiments were conducted using MATLAB version 2024a and Keras 2.10, with a seeded random number generator and GPU-accelerated training.
+
+\subsection{Results}
+
+The results of this experiment, summarised in Table \ref{tab:normalisation-results}, show minimal difference between the three normalisation strategies. The baseline model previously achieved an accuracy of 63.41\%, while both global and channel-based normalisation resulted in lower accuracies of 62.99\% and 63.16\% respectively. Training and validation accuracy-loss curves are shown in Figure \ref{fig:channel-norm-acc-loss} and \ref{fig:global-norm-acc-loss}.
+
+\begin{table}[h]
+    \centering
+    \caption{Comparison of normalisation strategies on the DeepShip dataset.}
+    \label{tab:normalisation-results}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Normalisation strategy} & \textbf{Accuracy (\%)} & \textbf{Precision} \\
+        \midrule
+        Global normalisation            & 62.99 & 65.66 \\
+        Channel-based normalisation     & 63.16 & 66.34 \\
+        \textbf{Baseline} & \textbf{63.41} & \textbf{66.53} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Discussion}
+
+The lack of improvement in classification accuracy was unexpected, particularly given the extensive body of research demonstrating the theoretical and practical benefits of normalisation for machine learning tasks (\cite{chris_kroenke_normalizing_2022, gunes_answer_2020, wu_group_2018, primus_frequency-wise_2023, simic_normalization_2023}).
+
+The most plausible explanation for this null result lies in the relatively consistent scale and distribution of spectrogram features in the DeepShip dataset, influenced by two key factors: (a) the logarithmic transformation applied during the conversion to power spectrograms, and (b) the consequences of the dataset's recording setup.
+
+The conversion of amplitude spectrograms into power spectrograms involved a base-10 logarithmic transformation (Section \ref{sec:inputs}). This process inherently standardises the input values by compressing their dynamic range, reducing the variability in feature scales, and possibly diminishing the added benefits of explicit normalisation.
+
+A more fundamental factor, however, may be the controlled recording setup used to create the DeepShip dataset. As described in Section \ref{subsubsec:deepship}, the DeepShip recordings were collected using a fixed hydrophone located approximately 145 metres below sea level (Figure \ref{fig:deepship-recording-setup}). Recordings were only made when a single vessel was within a 2km radius of the hydrophone, ensuring a relatively uniform acoustic environment. This controlled setup likely causes the DeepShip dataset to have an internally consistent structure across recordings. Consequently, normalisation techniques that target variability in feature scales may not be as impactful for the DeepShip dataset, as compared to datasets collected using more dynamic setups, such as towed arrays travelling through a variety of acoustic environments.
+
+Additionally, it is possible that the relatively short training duration of five epochs limited the ability of the model to fully leverage any benefits introduced by normalisation. Normalisation's primary advantages, such as stabilising gradient flow and accelerating convergence, may become more evident over longer training periods or with deeper models.
+
+A key limitation of the experiment was the approach taken to calculate the normalisation statistics. In standard practice, the mean and standard deviation are calculated on the training set and then applied to both the training and test sets. This ensures that the test data remains unseen during the calculation of normalisation parameters, preserving the integrity of the evaluation process and preventing data leakage. However, due to the $k$-fold cross-validation setup used in this study, where training and testing sets change dynamically in each fold, it was impractical to calculate the mean and standard deviation exclusively from the training set. Instead, normalisation statistics were computed using the entire dataset. While this compromise was necessary given the experimental constraints, it may have compromised the validity of the experiment by introducing a minor data leakage effect, which could distort the results and undermine the reliability of the evaluation process.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[trim={3cm 0 3cm 0.8cm},clip,width=\textwidth]{img/ch4/channel/channel_by_epoch.pdf}
+        \caption{Training and validation accuracy and loss trends per epoch for the channel normalisation experiment.}
+        \label{fig:channel-norm-by-epoch}
+    \end{subfigure}
+    
+    \vspace{1cm}
+    
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[trim={3cm 0 3cm 0.8cm},clip,width=\textwidth]{img/ch4/channel/channel_by_fold.pdf}
+        \caption{Training and validation accuracy and loss trends per fold for the channel normalisation experiment.}
+        \label{fig:channel-norm-by-fold}
+    \end{subfigure}
+    \caption{Comparison of training and validation performance for channel normalisation, showing accuracy and loss curves evaluated by (a) epoch and (b) fold.} 
+    \label{fig:channel-norm-acc-loss}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[trim={3cm 0 3cm 0.8cm},clip,width=\textwidth]{img/ch4/global/global_by_epoch.pdf}
+        \caption{Training and validation accuracy and loss trends per epoch for the global normalisation experiment.}
+        \label{global-norm-by-epoch}
+    \end{subfigure}
+    
+    \vspace{1cm}
+    
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[trim={3cm 0 3cm 0.8cm},clip,width=\textwidth]{img/ch4/channel/channel_by_fold.pdf}
+        \caption{Training and validation accuracy and loss trends per fold for the global normalisation experiment.}
+        \label{fig:global-norm-by-fold}
+    \end{subfigure}
+    \caption{Comparison of training and validation performance for global normalisation, showing accuracy and loss curves evaluated by (a) epoch and (b) fold.} 
+    \label{fig:global-norm-acc-loss}
+\end{figure}
+
+The training and validation accuracy-loss curves for both the channel normalisation experiment (Figure \ref{fig:channel-norm-acc-loss}) and global normalisation experiment (Figure \ref{fig:global-norm-acc-loss}) show a great similarity between not only each other but also the benchmark model's accuracy-loss curves (Figure \ref{fig:baseline-acc-loss}), signifying that the training procedure executed as expected with no major errors. In fact, the validation loss curve for the channel normalisation experiment (Figure \ref{fig:channel-norm-by-epoch}) demonstrates a lower variance across folds compared to the baseline model, potentially indicating a slight improvement in the model's generalisability.
+
+\subsection{Conclusion}
+
+This experiment demonstrated that global and channel-based normalisation had minimal impact on classification performance for the DeepShip dataset, with results obtained comparable to the baseline (unnormalised) model. The minimal improvement suggests that the preprocessing steps already applied -- such as the power spectrogram logarithmic conversion -- already played a significant role in normalising the input data, diminishing the additional benefits explicit standardisation was expected to offer. Additionally, the controlled recording setup of the DeepShip dataset, including the use of a fixed hydrophone and uniform recording conditions, likely contributed to the consistent feature scales observed. While normalisation may still hold value for underwater acoustics, its impact is likely to be more pronounced in datasets with greater variability, such as those collected using dynamic towed arrays in diverse acoustic environments.
+
+These findings highlight the importance of aligning preprocessing strategies with the specific characteristics of a dataset. Future work could explore alternative normalisation techniques, such as 0-1 normalisation or local normalisation, and examine their effects over longer training cycles or their role in improving training stability and convergence. Researchers may wish to begin with amplitude spectrograms rather than power spectrograms to isolate the impact of normalisation without other preprocessing factors influencing the results, and may wish to explore the effect of normalisation using alternative datasets which exhibit greater variability in their recording setup. Finally, while normalisation did not significantly impact classification accuracy in this study, it may still offer other advantages not captured in this experiment, such as enabling more efficient training. Future work could explore these aspects more thoroughly in order to gain a better understanding of the role of normalisation in the field of underwater acoustic target recognition.

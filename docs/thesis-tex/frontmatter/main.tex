@@ -1,0 +1,96 @@
+%%%%%%%% TITLE PAGE AND COPYRIGHT %%%%%%%%%%%%
+\newgeometry{
+    inner=2.5cm,
+    outer=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+\onehalfspacing
+\input{frontmatter/title_page}
+\restoregeometry
+\onehalfspacing
+
+%%%%%%%%%%%%%%%% COPYRIGHT %%%%%%%%%%%%%%%%%%%%
+\clearpage\null\thispagestyle{empty}
+\clearpage\null\thispagestyle{empty}
+\begin{center}
+    \vspace*{\fill}
+    
+    % \textcopyright \ 2024 Antriksh Dhand \\
+    % All Rights Reserved\\ \vspace{1em}
+    
+    No part of this work may be reproduced, stored in a retrieval system, or transmitted \\
+    in any form or by any means, electronic, mechanical, photocopying, or otherwise, \\
+    without the prior permission of the author or The University of Sydney.
+\end{center}
+
+%%%%%%%%%%%%%%%% ABSTRACT %%%%%%%%%%%%%%%%%%%%
+\clearpage\null\thispagestyle{empty}
+\chapter*{Abstract}\addcontentsline{toc}{chapter}{Abstract}
+
+Underwater acoustic target recognition (UATR) is a critical task in the application of sonar systems that aims to classify objects based on their acoustic signatures. Traditionally, UATR has relied on rule-based systems and the expertise of highly-trained sonar technicians to extract and classify features from raw sonar signals. However, recent advancements in artificial intelligence, particularly the rise of deep learning, have spurred interest in automating this process. 
+
+A key factor influencing classification accuracy in machine learning models is the quality of the input data. To this end, various preprocessing techniques have been developed to enhance sonar signal quality by reducing noise and highlighting relevant features. This thesis evaluates the impact of three preprocessing techniques -- normalisation, detrending, and denoising -- on UATR performance, using the DeepShip dataset and a hybrid convolutional neural network-long short-term memory (CNN-LSTM) model as the experimental foundation.
+
+Experiments with normalisation revealed minimal impact, largely due to the inherent consistency of the dataset and prior preprocessing steps, such as power spectrogram conversion. Detrending with $\ell_1$ algorithms consistently reduced classification accuracy, likely due to over-smoothing and disruption of spectrogram features critical for the CNN-LSTM model. Efforts to adapt the Noise2Noise framework for denoising underwater spectrograms highlighted the challenges of dynamic underwater environments, where its assumptions could not be effectively met. Despite these limitations, masking-based denoising techniques showed promise in isolating regions of interest in spectrograms, offering a viable direction for future exploration.
+
+This thesis underscores the unique challenges of adapting machine learning techniques to the underwater acoustic domain. The findings highlight the need for tailored preprocessing and model development to address the inherent variability and complexity of sonar data, paving the way for more robust and effective UATR systems.
+
+%%%%%%%%%%%%%%%% DECLARATION %%%%%%%%%%%%%%%%%
+\clearpage\thispagestyle{empty}
+\chapter*{Declaration}
+\thispagestyle{empty}
+I hereby declare that this thesis is wholly my own work and that, to the best of my knowledge and belief, it contains no material previously published or written by another person nor material which has been accepted for the award of any other degree or diploma of the University or other institute of higher learning, except where due acknowledgement has been made in the text.
+
+\vfill
+
+\noindent
+\includegraphics[width=0.33\textwidth]{img/ch0_frontmatter/signature.pdf}\\[10pt] \noindent\textbf{Antriksh Dhand}\\[7pt]
+\noindent December 18, 2024
+
+%%%%%%%%%%%%%%%% ACKNOWLEDGEMENTS %%%%%%%%%%%%%%%%%%%%
+\clearpage\thispagestyle{empty}
+\chapter*{Acknowledgements}
+\thispagestyle{empty}
+
+I would like to express my gratitude to Thales for providing me with the opportunity to work on such a challenging project. I thank my supervisors and colleagues, Daniel La Mela, Chang Sung, and Mark Tadourian, for their guidance and support over the past six months. I further extend my appreciation to my academic supervisor, Dr. Dong Yuan, for his advice and continuous encouragement throughout this process.
+
+\vspace{1em}
+
+\noindent I would also like to dedicate this work to those who have supported me emotionally over the past six months. To my family -- Mum, Dad, and Oshin -- this thesis would not have been possible without the support and foundation you have always provided me. To Jocelyn, for helping me make it through this internship despite being all the way in America: you've proven that true friendship knows no geographical bounds. To Udit, for reminding me that this is just one step in a much bigger picture. And to all my other friends, who are probably tired of hearing about my thesis -- thank you for being there, listening, and supporting me from the sidelines. This work is dedicated to all of you.
+
+%%%%%%%%%%%%%%%% EPIGRAPH %%%%%%%%%%%%%%%%%%%%
+\clearpage\null\thispagestyle{empty}
+\clearpage\thispagestyle{empty}
+
+\vspace*{8cm} 
+
+\begin{center}
+    \begin{minipage}{0.8\textwidth}
+        \begin{flushright}
+            \itshape
+            ``Machine intelligence is the last invention that humanity\\
+            will ever need to make.''
+        \end{flushright}
+        \vspace{0.3cm}
+        \begin{flushright}
+            \attrib{Nick Bostrom}
+        \end{flushright}
+    \end{minipage}
+\end{center}
+
+%%%%%%%%%%%%%%%% TABLE OF CONTENTS %%%%%%%%%%%%%%%%%%%%
+\newpage\thispagestyle{empty}
+\tableofcontents
+
+%%%%%% LIST OF FIGURES, TABLES, ABBREVIATIONS  %%%%%%%%%%
+\newpage\thispagestyle{empty}
+\listoffigures\addcontentsline{toc}{chapter}{List of Figures}
+
+\newpage\thispagestyle{empty}
+\listoftables\addcontentsline{toc}{chapter}{List of Tables}
+
+\newpage\thispagestyle{empty}
+\input{frontmatter/list_of_abbrs}
+\printglossary[type=\acronymtype, title={List of Abbreviations}]
+\addcontentsline{toc}{chapter}{List of Abbreviations}

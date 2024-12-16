@@ -1,0 +1,45 @@
+%%% Document formatting %%%
+\documentclass[
+    a4paper,
+    11pt, 
+    twoside, 
+    titlepage, 
+    openright,
+]{book}
+
+\input{tex_preamble}
+
+\begin{document}
+
+%%%%%%%%%%% FRONT MATTER %%%%%%%%%%%  
+\frontmatter
+\onehalfspacing
+
+\include{frontmatter/main}
+
+%%%%%%%%%%% MAIN MATTER %%%%%%%%%%%  
+\mainmatter
+\onehalfspacing
+
+\newpage\null\thispagestyle{empty}
+\newpage\null\thispagestyle{empty}
+
+\include{chapters/ch1_introduction}
+\include{chapters/ch2_background_review}
+\include{chapters/ch3_baseline}
+\include{chapters/ch4_normalisation}
+\include{chapters/ch5_detrending}
+\include{chapters/ch6_denoising}
+\include{chapters/ch7_conclusion}
+
+%%%%%%%%%%% APPENDICES %%%%%%%%%%%
+
+\appendix
+\include{appendices/1_case_studies}
+
+%%%%%%%%%%% BACK MATTER %%%%%%%%%%%
+\backmatter
+\include{backmatter/bibliography}
+
+
+\end{document}

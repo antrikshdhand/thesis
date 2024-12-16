@@ -1,0 +1,91 @@
+\usepackage[
+    top=1.1in,
+    bottom=1.1in,
+    inner=1.0in,
+    outer=1.3in,
+    % showframe
+]{geometry}
+\raggedbottom
+\pdfpagewidth=\paperwidth 
+\pdfpageheight=\paperheight
+
+\usepackage[utf8]{inputenc}
+
+\emergencystretch=1em
+
+%%% Bibliography %%%
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{references.bib}
+\AtEveryBibitem{
+    %\clearfield{doi}
+    \clearfield{url}
+    \clearfield{urlyear}
+    \clearfield{urlmonth}
+    \clearfield{note}
+    % \clearfield{isbn}
+    \clearfield{issn}
+    \clearfield{eprint}
+    \clearfield{eprinttype}
+    \clearfield{langid}
+}
+
+%%% Image packages %%%
+\usepackage{graphicx}
+\graphicspath{ {./img/} }
+\usepackage{subcaption} % For subfigures
+
+% For drawing neural networks
+\usepackage{neuralnetwork}
+\newcommand{\xin}[2]{$x_#2$}
+\newcommand{\xout}[2]{$\hat x_#2$}
+
+%%% Tables %%%
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{rotating}
+
+%%% Text %%%
+\usepackage{xurl} % line breaks for urls
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    citecolor=blue!80,
+    linkcolor=black, 
+    filecolor=black,    
+    urlcolor=black,
+    linktoc=all, 
+    unicode=true
+}
+
+\usepackage{setspace} % line spacing
+\usepackage{lipsum} % lorem ipsum paragraphs
+
+\usepackage[svgnames]{xcolor} % colors
+
+\usepackage[font={small},labelfont={bf},margin=12ex,skip=15pt]{caption} % Makes bold labelled and smaller font captions.
+\captionsetup[table]{belowskip=5pt}  % Set above and below padding
+
+\renewcommand{\thefootnote}{\alph{footnote}} % Lettered footnotes 
+
+\usepackage[acronym, nonumberlist, nopostdot]{glossaries} %%% List of Abbreviations
+\makeglossaries
+
+\usepackage{titlesec}
+\titleformat*{\paragraph}{\itshape\mdseries} % Change \paragraph styling
+
+% Poetry
+\usepackage{verse}
+\newcommand{\attrib}[1]{%
+\nopagebreak{\raggedleft\footnotesize #1\par}
+}
+
+%%% Math %%%
+\usepackage{amsmath}
+\usepackage{bm} % Bold vectors
+\usepackage{dsfont} % Literally only here for the indicator function
+
+%%% TikZ %%%
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, calc}
