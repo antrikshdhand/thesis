@@ -123,7 +123,7 @@ A major application of sonar systems is \acrfull{uatr}, which forms the central 
 
 In conventional underwater acoustic target recognition, human sonar operators are responsible for analysing real-time acoustic data to detect and classify underwater objects. The process begins as described in Section \ref{subsec:sonar-working}, with sonar systems detecting sound waves through arrays of hydrophones and converting the acoustic signals into electrical signals. These electrical signals then find their way onto two main interfaces: the broadband display and the narrowband display.
 
-\begin{figure}[htbp]
+\begin{figure}[tbp]
     \centering
     \includegraphics[width=0.9\textwidth]{img/ch2/sonar_operator.png}
     \caption{Sonar operators observing broadband and narrowband displays, obtained from \cite{amick_how_2020}.}
@@ -249,17 +249,7 @@ As discussed in-depth in Section \ref{subsubsec:uatr-intro}, narrowband sounds r
 
 This section provides the reader with the necessary background to understand how \acrlong{ai} and \acrlong{ml} techniques are used for \acrshort{uatr}. It begins with a brief historical overview of the field, tracing its development over the 20th and 21st centuries. A comprehensive literature review of classification techniques follows, drawn from over 50 relevant studies. The discussion then shifts to the use of \acrlong{dl} methods for the automatic extraction of features from input data. Finally, the section concludes with an overview of the datasets commonly used to train \acrshort{ml} models for \acrshort{uatr}.
 
-\subsection{Historical development of AI}\label{subsec:ai-history}
-
-\Acrlong{ai} is a relatively recent addition to the scientific corpus, with its foundations laid in the mid-20th century. This section aims to provide a concise historical overview of \acrshort{ai} and position \acrlong{ml} within the broader \acrshort{ai} landscape\footnotemark.
-
-\footnotetext{For a more extensive historical recount of the field, readers are encouraged to refer to McCorduck's ``Machines Who Think'' \cite{mccorduck_machines_2018} and Chapter 1 of Russell and Norvig's standard reference ``Artificial Intelligence: A Modern Approach'' \cite{russell_artificial_2021}.}
-
-\subsubsection{Early days and the advent of the perceptron}
-
-Perhaps the most intuitive way to introduce \acrlong{ai} is through the framework provided by Russell and Norvig. They propose that \acrlong{ai} can be categorised into two main schools of thought: \textit{human-centred} and \textit{rationality-centred} (Table \ref{tab:ai-approaches}). The human-centred approach seeks to build systems that mimic human thinking or behavior. This approach is closely aligned with subfields like neuroscience, artificial general intelligence, and robotics, where the goal is to replicate or simulate human cognition. In contrast, the rationality-centred approach focuses on designing agents that make optimal decisions, independent of whether they think or act like humans. This latter approach dominates modern \acrshort{ai} research, particularly in subfields such as \acrlong{ml}, where algorithms are trained to optimise decision-making based on the data they process. 
-
-\begin{table}[htbp]
+\begin{table}[h]
 \centering
 \caption{The four historical perspectives of artificial intelligence proposed by Russell and Norvig \cite{russell_artificial_2021}.}
 \label{tab:ai-approaches}
@@ -271,6 +261,16 @@ Act like humans & Act rationally \\ \bottomrule
 \end{tabular}
 \end{table}
 
+\subsection{Historical development of AI}\label{subsec:ai-history}
+
+\Acrlong{ai} is a relatively recent addition to the scientific corpus, with its foundations laid in the mid-20th century. This section aims to provide a concise historical overview of \acrshort{ai} and position \acrlong{ml} within the broader \acrshort{ai} landscape\footnotemark.
+
+\footnotetext{For a more extensive historical recount of the field, readers are encouraged to refer to McCorduck's ``Machines Who Think'' \cite{mccorduck_machines_2018} and Chapter 1 of Russell and Norvig's standard reference ``Artificial Intelligence: A Modern Approach'' \cite{russell_artificial_2021}.}
+
+\subsubsection{Early days and the advent of the perceptron}
+
+Perhaps the most intuitive way to introduce \acrlong{ai} is through the framework provided by Russell and Norvig. They propose that \acrlong{ai} can be categorised into two main schools of thought: \textit{human-centred} and \textit{rationality-centred} (Table \ref{tab:ai-approaches}). The human-centred approach seeks to build systems that mimic human thinking or behavior. This approach is closely aligned with subfields like neuroscience, artificial general intelligence, and robotics, where the goal is to replicate or simulate human cognition. In contrast, the rationality-centred approach focuses on designing agents that make optimal decisions, independent of whether they think or act like humans. This latter approach dominates modern \acrshort{ai} research, particularly in subfields such as \acrlong{ml}, where algorithms are trained to optimise decision-making based on the data they process. 
+
 
 The earliest efforts in the field were human-centred. For example, the Turing test, introduced by Alan Turing in 1950, measures a machine’s ability to exhibit human-like intelligence by determining whether its responses are indistinguishable from that of a human’s \cite{turing_computing_1950}. 
 
@@ -278,7 +278,7 @@ Another key idea, also inspired by the workings of the human brain, was the \tex
 
 When the combined input signal from the dendrites is strong enough, the neuron reaches a threshold, triggering an electrical signal called an ``action potential'' that travels down the axon. As this action potential reaches the synapse, it causes the release of neurotransmitters across the synaptic gap, facilitating the transfer of chemical signals to the dendrites of the adjacent neuron. These neurotransmitters then bind to receptors on the target neuron's dendrites, influencing whether that neuron will also generate an action potential. Some synapses excite the receiving dendrites, increasing the likelihood of neuron activation, while others inhibit them, reducing this likelihood. This process continues as signals propagate through the neural network.
 
-\begin{figure}[htbp]
+\begin{figure}[tb]
     \centering
     \includegraphics[width=\textwidth]{img/ch1/neuron.png}
     \caption{Illustration of a biological neuron and its analogue, the perceptron \cite{pramoditha_concept_2021}.}
@@ -457,7 +457,7 @@ The encoder's job is to take the input (often an image) and pass it through mult
 
 This encoder-decoder structure is extremely useful in feature extraction because it forces the network to learn what aspects of the input are most important. Since the encoder must compress the data, it has to decide which features are essential for accurately reconstructing the input, making it a powerful tool for unsupervised learning tasks like dimensionality reduction, data denoising, or even generating new data.
 
-\begin{figure}[htbp]
+\begin{figure}[tbp]
 \centering
 \begin{neuralnetwork}[height=8]
   \tikzstyle{input neuron}=[neuron, fill=orange!70];

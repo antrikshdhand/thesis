@@ -29,7 +29,7 @@ The $\ell_1$ detrending algorithm \cite{kim_ell_1_2009} builds on the principles
 \end{equation}
 Here, the $\ell_1$ norm ($\| \cdot \|$) in the second term penalises large differences between successive points in the trend, enforcing smoothness while preserving sharp transitions.
 
-The $\ell_1$ detrending algorithm retains the flexibility of the H-P filter with its tunable regularisation parameter $\lambda$, but its use of the $\ell_1$ norm allows it to better handle datasets with localised events or abrupt changes. Ship radiated noise, for instance, often contains periodic narrowband features from machinery noise, which can be masked by the broadband components in the signal. The $\ell_1$ algorithm’s sensitivity to these features makes it particularly suitable for UATR tasks. By fine-tuning $\lambda$, we can strike a balance between removing the trend and preserving the narrowband features critical classification.
+The $\ell_1$ detrending algorithm retains the flexibility of the H-P filter with its tunable regularisation parameter $\lambda$, but its use of the $\ell_1$ norm allows it to better handle datasets with localised events or abrupt changes. Ship radiated noise, for instance, often contains periodic narrowband features from machinery noise, which can be masked by the broadband components in the signal. The $\ell_1$ algorithm’s sensitivity to these features makes it particularly suitable for UATR tasks. By fine-tuning $\lambda$, we can strike a balance between removing the trend and preserving the narrowband features critical for classification.
 
 \section{Experiments}
 
