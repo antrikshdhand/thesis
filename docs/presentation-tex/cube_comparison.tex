@@ -1,0 +1,192 @@
+\begin{figure}[htbp]
+    \centering
+
+    % First Cube
+    \begin{subfigure}[t]{0.35\textwidth}
+        \centering
+        \begin{tikzpicture}[scale=0.35,every node/.style={minimum size=0.5cm},on grid]
+
+        % Front face
+        \begin{scope}[every node/.append style={yslant=-0.5},yslant=-0.5]
+
+            % Manually color the front face
+            \fill[blue!30] (0,3) rectangle +(1,1);
+            \fill[blue!30] (1,3) rectangle +(1,1);
+            \fill[blue!30] (2,3) rectangle +(1,1);
+            \fill[blue!30] (3,3) rectangle +(1,1);
+            
+            \fill[blue!30] (0,2) rectangle +(1,1);
+            \fill[blue!30] (1,2) rectangle +(1,1);
+            \fill[blue!30] (2,2) rectangle +(1,1);
+            \fill[blue!30] (3,2) rectangle +(1,1);
+            
+            \fill[blue!30] (0,1) rectangle +(1,1);
+            \fill[blue!30] (1,1) rectangle +(1,1);
+            \fill[blue!30] (2,1) rectangle +(1,1);
+            \fill[blue!30] (3,1) rectangle +(1,1);
+            
+            \fill[blue!30] (0,0) rectangle +(1,1);
+            \fill[blue!30] (1,0) rectangle +(1,1);
+            \fill[blue!30] (2,0) rectangle +(1,1);
+            \fill[blue!30] (3,0) rectangle +(1,1);
+    
+            \draw (0,0) grid (4,4);
+        \end{scope}
+
+        % Top face
+        \begin{scope}[every node/.append style={yslant=0.5,xslant=-1},yslant=0.5,xslant=-1]
+        
+            % Manually color and label each sub-cube for the top face
+            \fill[blue!30] (4,3) rectangle +(1,1);
+            (5,3) rectangle +(1,1);
+            (6,3) rectangle +(1,1);
+            (7,3) rectangle +(1,1);
+        
+            \fill[blue!30] (4,2) rectangle +(1,1);
+            (5,2) rectangle +(1,1);
+            (6,2) rectangle +(1,1);
+            (7,2) rectangle +(1,1);
+        
+            \fill[blue!30] (4,1) rectangle +(1,1);
+            (5,1) rectangle +(1,1);
+            (6,1) rectangle +(1,1);
+            (7,1) rectangle +(1,1);
+        
+            \fill[blue!30] (4,0) rectangle +(1,1);
+            (5,0) rectangle +(1,1);
+            (6,0) rectangle +(1,1);
+            (7,0) rectangle +(1,1);
+        
+            \draw (4,0) grid (8,4);
+        \end{scope}
+
+        % Side face
+        \begin{scope}[every node/.append style={yslant=0.5},yslant=0.5]
+        
+            % Manually color the side face
+            \fill[blue!30] (4,-1) rectangle +(1,1);
+            \fill[blue!30] (4,-2) rectangle +(1,1);
+            \fill[blue!30] (4,-3) rectangle +(1,1);
+            \fill[blue!30] (4,-4) rectangle +(1,1);
+        
+            (5,-1) rectangle +(1,1);
+            (5,-2) rectangle +(1,1);
+            (5,-3) rectangle +(1,1);
+            (5,-4) rectangle +(1,1);
+        
+            (6,-1) rectangle +(1,1);
+            (6,-2) rectangle +(1,1);
+            (6,-3) rectangle +(1,1);
+            (6,-4) rectangle +(1,1);
+        
+            (7,-1) rectangle +(1,1);
+            (7,-2) rectangle +(1,1);
+            (7,-3) rectangle +(1,1);
+            (7,-4) rectangle +(1,1);
+        
+            \draw (4,-4) grid (8,0);
+        \end{scope}
+
+        % Axes labels
+        \node[below] at (1,-0.8) {$n$};
+        \node[below right] at (8.2,3) {$T$};
+        \node[below] at (7,-0.8) {$F$};
+
+        \end{tikzpicture}
+        \caption{Channel-based normalisation}
+    \end{subfigure}
+    \hspace{1.5cm}
+    \begin{subfigure}[t]{0.35\textwidth}
+        \centering
+        \begin{tikzpicture}[scale=0.35,every node/.style={minimum size=0.5cm},on grid]
+        
+        % Front face
+        \begin{scope}[every node/.append style={yslant=-0.5},yslant=-0.5]
+        
+            % Manually color the front face
+            \fill[blue!30] (0,3) rectangle +(1,1);
+            \fill[blue!30] (1,3) rectangle +(1,1);
+            \fill[blue!30] (2,3) rectangle +(1,1);
+            \fill[blue!30] (3,3) rectangle +(1,1);
+        
+            \fill[blue!30] (0,2) rectangle +(1,1);
+            \fill[blue!30] (1,2) rectangle +(1,1);
+            \fill[blue!30] (2,2) rectangle +(1,1);
+            \fill[blue!30] (3,2) rectangle +(1,1);
+        
+            \fill[blue!30] (0,1) rectangle +(1,1);
+            \fill[blue!30] (1,1) rectangle +(1,1);
+            \fill[blue!30] (2,1) rectangle +(1,1);
+            \fill[blue!30] (3,1) rectangle +(1,1);
+        
+            \fill[blue!30] (0,0) rectangle +(1,1);
+            \fill[blue!30] (1,0) rectangle +(1,1);
+            \fill[blue!30] (2,0) rectangle +(1,1);
+            \fill[blue!30] (3,0) rectangle +(1,1);
+        
+            \draw (0,0) grid (4,4);
+        \end{scope}
+        
+        % Top face
+        \begin{scope}[every node/.append style={yslant=0.5,xslant=-1},yslant=0.5,xslant=-1]
+        
+            % Manually color the top face
+            \fill[blue!30] (4,3) rectangle +(1,1);
+            \fill[blue!30] (5,3) rectangle +(1,1);
+            \fill[blue!30] (6,3) rectangle +(1,1);
+            \fill[blue!30] (7,3) rectangle +(1,1);
+        
+            \fill[blue!30] (4,2) rectangle +(1,1);
+            \fill[blue!30] (5,2) rectangle +(1,1);
+            \fill[blue!30] (6,2) rectangle +(1,1);
+            \fill[blue!30] (7,2) rectangle +(1,1);
+        
+            \fill[blue!30] (4,1) rectangle +(1,1);
+            \fill[blue!30] (5,1) rectangle +(1,1);
+            \fill[blue!30] (6,1) rectangle +(1,1);
+            \fill[blue!30] (7,1) rectangle +(1,1);
+        
+            \fill[blue!30] (4,0) rectangle +(1,1);
+            \fill[blue!30] (5,0) rectangle +(1,1);
+            \fill[blue!30] (6,0) rectangle +(1,1);
+            \fill[blue!30] (7,0) rectangle +(1,1);
+        
+            \draw (4,0) grid (8,4);
+        \end{scope}
+        
+        % Side face
+        \begin{scope}[every node/.append style={yslant=0.5},yslant=0.5]
+        
+            % Manually color the side face
+            \fill[blue!30] (4,-1) rectangle +(1,1);
+            \fill[blue!30] (4,-2) rectangle +(1,1);
+            \fill[blue!30] (4,-3) rectangle +(1,1);
+            \fill[blue!30] (4,-4) rectangle +(1,1);
+        
+            \fill[blue!30] (5,-1) rectangle +(1,1);
+            \fill[blue!30] (5,-2) rectangle +(1,1);
+            \fill[blue!30] (5,-3) rectangle +(1,1);
+            \fill[blue!30] (5,-4) rectangle +(1,1);
+        
+            \fill[blue!30] (6,-1) rectangle +(1,1);
+            \fill[blue!30] (6,-2) rectangle +(1,1);
+            \fill[blue!30] (6,-3) rectangle +(1,1);
+            \fill[blue!30] (6,-4) rectangle +(1,1);
+        
+            \fill[blue!30] (7,-1) rectangle +(1,1);
+            \fill[blue!30] (7,-2) rectangle +(1,1);
+            \fill[blue!30] (7,-3) rectangle +(1,1);
+            \fill[blue!30] (7,-4) rectangle +(1,1);
+        
+            \draw (4,-4) grid (8,0);
+        \end{scope}
+        
+        % Axes labels
+        \node[below] at (1,-0.8) {$n$};
+        \node[below right] at (8.2,3) {$T$};
+        \node[below] at (7,-0.8) {$F$};
+        
+        \end{tikzpicture}
+        \caption{Global normalisation}
+    \end{subfigure}
+\end{figure}
